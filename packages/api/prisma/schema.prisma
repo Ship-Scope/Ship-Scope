@@ -1,0 +1,164 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+// ============================================
+// FEEDBACK INGESTION
+// ============================================
+
+model FeedbackSource {
+  id        String   @id @default(cuid())
+  name      String   // "Intercom", "CSV Upload", "Slack", etc.
+  type      String   // csv, api, intercom, zendesk, slack, manual
+  config    Json?    // Connection config (API keys stored encrypted)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  feedbackItems FeedbackItem[]
+}
+
+model FeedbackItem {
+  id        String   @id @default(cuid())
+  content   String   // The raw feedback text
+  sourceId  String
+  source    FeedbackSource @relation(fields: [sourceId], references: [id])
+
+  // Metadata
+  author      String?  // Customer name/ID
+  authorEmail String?
+  sentiment   Float?   // -1 to 1 sentiment score
+  urgency     Float?   // 0 to 1 urgency score
+  channel     String?  // "support_ticket", "interview", "survey", "slack"
+  externalId  String?  // ID in the source system
+  metadata    Json?    // Any additional structured data
+
+  // AI Processing
+  embedding   Unsupported("vector(1536)")?  // OpenAI text-embedding-3-small
+  processed   Boolean  @default(false)
+  processedAt DateTime?
+
+  // Relations
+  themes    FeedbackThemeLink[]
+  proposals ProposalEvidence[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sourceId])
+  @@index([processed])
+  @@index([channel])
+}
+
+// ============================================
+// AI SYNTHESIS
+// ============================================
+
+model Theme {
+  id          String   @id @default(cuid())
+  name        String   // AI-generated theme name
+  description String   // What this theme is about
+  category    String?  // "bug", "feature_request", "ux_issue", "performance"
+  
+  // Scoring
+  feedbackCount Int    @default(0)
+  avgSentiment  Float? 
+  avgUrgency    Float?
+  score         Float? // Composite opportunity score
+
+  // Relations
+  feedbackItems FeedbackThemeLink[]
+  proposals     Proposal[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FeedbackThemeLink {
+  id         String       @id @default(cuid())
+  feedbackId String
+  themeId    String
+  confidence Float        @default(1.0) // How confident the AI is about this link
+  feedback   FeedbackItem @relation(fields: [feedbackId], references: [id])
+  theme      Theme        @relation(fields: [themeId], references: [id])
+
+  @@unique([feedbackId, themeId])
+}
+
+// ============================================
+// FEATURE PROPOSALS
+// ============================================
+
+model Proposal {
+  id          String  @id @default(cuid())
+  title       String  // "Add bulk export functionality"
+  description String  // Detailed description of the proposed feature
+  problem     String  // The problem this solves
+  solution    String  // Proposed solution
+
+  // Prioritization
+  impactScore   Float?  // Estimated impact (0-10)
+  effortScore   Float?  // Estimated effort (0-10)  
+  confidenceScore Float? // How confident are we (0-10)
+  reachScore    Float?  // How many users affected (0-10)
+  riceScore     Float?  // Computed RICE score
+
+  // Status
+  status      String  @default("proposed") // proposed, approved, rejected, shipped
+
+  // Relations
+  themeId     String?
+  theme       Theme?  @relation(fields: [themeId], references: [id])
+  evidence    ProposalEvidence[]
+  specs       Spec[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([riceScore])
+}
+
+model ProposalEvidence {
+  id         String       @id @default(cuid())
+  proposalId String
+  feedbackId String
+  relevance  Float        @default(1.0)
+  quote      String?      // Key quote from the feedback
+  proposal   Proposal     @relation(fields: [proposalId], references: [id])
+  feedback   FeedbackItem @relation(fields: [feedbackId], references: [id])
+
+  @@unique([proposalId, feedbackId])
+}
+
+// ============================================
+// SPEC GENERATION
+// ============================================
+
+model Spec {
+  id         String   @id @default(cuid())
+  proposalId String
+  proposal   Proposal @relation(fields: [proposalId], references: [id])
+  
+  // Generated content
+  prd          String?  // Full PRD markdown
+  userStories  Json?    // Array of user stories
+  acceptanceCriteria Json? // Array of acceptance criteria
+  dataModel    String?  // Data model changes
+  apiSpec      String?  // API endpoint specifications
+  taskBreakdown Json?   // Development tasks
+  agentPrompt  String?  // Ready-to-use prompt for Cursor/Claude Code
+
+  // Export
+  exportedTo   String?  // "linear", "jira", "github"
+  exportedAt   DateTime?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
