@@ -43,3 +43,4 @@ packages/api/prisma/*.db
 # Uploads
 uploads/
 tmp/
+dev-plan
