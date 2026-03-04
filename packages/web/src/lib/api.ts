@@ -329,3 +329,114 @@ export const specsApi = {
       .get<{ data: string }>(`/specs/${specId}/agent-prompt`, { params: { format } })
       .then((r) => r.data.data),
 };
+
+// ============================================
+// Dashboard API
+// ============================================
+
+export interface EntityStat {
+  total: number;
+  currentWeek: number;
+  previousWeek: number;
+  trendPercent: number;
+  trendDirection: 'up' | 'down' | 'flat';
+}
+
+export interface DashboardStats {
+  feedback: EntityStat;
+  themes: EntityStat;
+  proposals: EntityStat;
+  specs: EntityStat;
+}
+
+export interface ActivityEntry {
+  id: string;
+  type: string;
+  description: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface TopTheme {
+  id: string;
+  name: string;
+  feedbackCount: number;
+  category: string | null;
+}
+
+export interface SentimentDistribution {
+  average: number;
+  negative: number;
+  neutral: number;
+  positive: number;
+  total: number;
+}
+
+export const dashboardApi = {
+  stats: () => api.get<{ data: DashboardStats }>('/dashboard/stats').then((r) => r.data.data),
+
+  activity: (limit = 10) =>
+    api
+      .get<{ data: ActivityEntry[] }>('/dashboard/activity', { params: { limit } })
+      .then((r) => r.data.data),
+
+  topThemes: (limit = 5) =>
+    api
+      .get<{ data: TopTheme[] }>('/dashboard/top-themes', { params: { limit } })
+      .then((r) => r.data.data),
+
+  sentiment: () =>
+    api.get<{ data: SentimentDistribution }>('/dashboard/sentiment').then((r) => r.data.data),
+};
+
+// ============================================
+// Settings API
+// ============================================
+
+export interface AITestResult {
+  success: boolean;
+  model: string;
+  message: string;
+}
+
+export const settingsApi = {
+  getAll: () => api.get<{ data: Record<string, string> }>('/settings').then((r) => r.data.data),
+
+  update: (settings: Record<string, string>) =>
+    api.put<{ data: Record<string, string> }>('/settings', settings).then((r) => r.data.data),
+
+  testAI: () => api.post<{ data: AITestResult }>('/settings/test-ai').then((r) => r.data.data),
+
+  exportData: () => api.post<{ data: unknown }>('/settings/export').then((r) => r.data.data),
+
+  deleteAllData: () =>
+    api
+      .delete<{ data: { deleted: Record<string, number> } }>('/settings/data')
+      .then((r) => r.data.data),
+
+  // API Keys
+  listApiKeys: () =>
+    api
+      .get<{
+        keys: {
+          id: string;
+          name: string;
+          keyPrefix: string;
+          createdAt: string;
+          isActive: boolean;
+        }[];
+      }>('/settings/api-keys')
+      .then((r) => r.data.keys),
+
+  createApiKey: (name?: string) =>
+    api
+      .post<{
+        key: string;
+        id: string;
+        name: string;
+        keyPrefix: string;
+      }>('/settings/api-keys', { name })
+      .then((r) => r.data),
+
+  revokeApiKey: (id: string) => api.delete(`/settings/api-keys/${id}`),
+};
