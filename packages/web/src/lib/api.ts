@@ -214,3 +214,71 @@ export const synthesisApi = {
   theme: (id: string) =>
     api.get<{ data: ThemeItem }>(`/synthesis/themes/${id}`).then((r) => r.data.data),
 };
+
+// ============================================
+// Proposals API
+// ============================================
+
+export interface ProposalItem {
+  id: string;
+  title: string;
+  problem: string;
+  solution: string;
+  status: 'proposed' | 'approved' | 'rejected' | 'shipped';
+  reachScore: number | null;
+  impactScore: number | null;
+  confidenceScore: number | null;
+  effortScore: number | null;
+  riceScore: number | null;
+  themeId: string | null;
+  theme: { id: string; name: string; category: string | null } | null;
+  evidenceCount: number;
+  evidence?: {
+    id: string;
+    quote: string | null;
+    relevanceScore: number;
+    feedbackItem: {
+      id: string;
+      content: string;
+      author: string | null;
+      channel: string | null;
+      sentiment: number | null;
+      urgency: number | null;
+    };
+  }[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalsQueryParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  themeId?: string;
+  sortBy?: 'riceScore' | 'createdAt' | 'updatedAt' | 'impactScore' | 'effortScore';
+  sortOrder?: 'asc' | 'desc';
+  search?: string;
+}
+
+export interface ProposalGenerationResult {
+  proposalsCreated: number;
+  proposalsSkipped: number;
+  errors: { themeId: string; themeName: string; error: string }[];
+}
+
+export const proposalsApi = {
+  generate: (topN = 20) =>
+    api
+      .post<{ data: ProposalGenerationResult }>('/proposals/generate', { topN })
+      .then((r) => r.data.data),
+
+  list: (params: ProposalsQueryParams) =>
+    api.get<PaginatedResponse<ProposalItem>>('/proposals', { params }).then((r) => r.data),
+
+  get: (id: string) => api.get<{ data: ProposalItem }>(`/proposals/${id}`).then((r) => r.data.data),
+
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch<{ data: ProposalItem }>(`/proposals/${id}`, data).then((r) => r.data.data),
+
+  delete: (id: string) => api.delete(`/proposals/${id}`),
+};
