@@ -1,25 +1,18 @@
-import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { Router } from 'express';
+import { prisma } from '../lib/prisma';
+import { redis } from '../lib/redis';
 
-const prisma = new PrismaClient();
-export const healthRouter = Router();
+const router = Router();
 
-healthRouter.get("/", async (_req, res) => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      status: "healthy",
-      version: "0.1.0",
-      timestamp: new Date().toISOString(),
-      services: {
-        database: "connected",
-        api: "running",
-      },
-    });
-  } catch {
-    res.status(503).json({
-      status: "unhealthy",
-      timestamp: new Date().toISOString(),
-    });
-  }
+router.get('/', async (_req, res) => {
+  const [dbOk, redisOk] = await Promise.allSettled([prisma.$queryRaw`SELECT 1`, redis.ping()]);
+
+  res.json({
+    status: dbOk.status === 'fulfilled' && redisOk.status === 'fulfilled' ? 'ok' : 'degraded',
+    db: dbOk.status === 'fulfilled' ? 'connected' : 'disconnected',
+    redis: redisOk.status === 'fulfilled' ? 'connected' : 'disconnected',
+    timestamp: new Date().toISOString(),
+  });
 });
+
+export default router;

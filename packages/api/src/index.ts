@@ -1,53 +1,60 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import dotenv from "dotenv";
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import { requestLogger } from './middleware/requestLogger';
+import { errorHandler } from './middleware/errorHandler';
+import { prisma } from './lib/prisma';
+import { redis } from './lib/redis';
+import { logger } from './lib/logger';
+import healthRoutes from './routes/health';
+import feedbackRoutes from './routes/feedback';
+import synthesisRoutes from './routes/synthesis';
+import proposalRoutes from './routes/proposals';
+import specRoutes from './routes/specs';
+import webhookRoutes from './routes/webhook';
+import settingsRoutes from './routes/settings';
 
-import { feedbackRouter } from "./routes/feedback";
-import { synthesisRouter } from "./routes/synthesis";
-import { proposalRouter } from "./routes/proposals";
-import { specRouter } from "./routes/specs";
-import { healthRouter } from "./routes/health";
+export function createApp() {
+  const app = express();
 
-dotenv.config();
+  // Middleware (correct ordering)
+  app.use(requestLogger);
+  app.use(helmet());
+  app.use(cors({ origin: process.env.APP_URL || 'http://localhost:3000' }));
+  app.use(express.json({ limit: '50mb' }));
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+  // Routes
+  app.use('/api/health', healthRoutes);
+  app.use('/api/feedback', feedbackRoutes);
+  app.use('/api/synthesis', synthesisRoutes);
+  app.use('/api/proposals', proposalRoutes);
+  app.use('/api/specs', specRoutes);
+  app.use('/api/feedback/webhook', webhookRoutes);
+  app.use('/api/settings', settingsRoutes);
 
-// Middleware
-app.use(helmet());
-app.use(cors({ origin: process.env.APP_URL || "http://localhost:3000" }));
-app.use(express.json({ limit: "50mb" }));
+  // Error handler (must be last)
+  app.use(errorHandler);
 
-// Routes
-app.use("/api/health", healthRouter);
-app.use("/api/feedback", feedbackRouter);
-app.use("/api/synthesis", synthesisRouter);
-app.use("/api/proposals", proposalRouter);
-app.use("/api/specs", specRouter);
+  return app;
+}
 
-// Error handler
-app.use(
-  (
-    err: Error,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Internal server error" });
-  }
-);
+// Only listen when run directly
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 4000;
+  const app = createApp();
+  app.listen(PORT, () => {
+    logger.info(`ShipScope API v0.1.0 running on http://localhost:${PORT}`);
+  });
 
-app.listen(PORT, () => {
-  console.log(`
-  ┌─────────────────────────────────────┐
-  │                                     │
-  │   ShipScope API v0.1.0              │
-  │   Running on http://localhost:${PORT}  │
-  │                                     │
-  └─────────────────────────────────────┘
-  `);
-});
+  // Graceful shutdown
+  const shutdown = async () => {
+    logger.info('Shutting down gracefully...');
+    await prisma.$disconnect();
+    redis.disconnect();
+    process.exit(0);
+  };
 
-export default app;
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
