@@ -1,0 +1,6 @@
+feedback,author,email,channel
+"She said ""this feature is amazing"" during the call",Jane Doe,jane@example.com,interview
+"Needs improvement in: search, filter, and sort",Bob Wilson,bob@example.com,survey
+"Multi-line
+feedback with
+newlines in the content",Carol White,carol@example.com,support_ticket

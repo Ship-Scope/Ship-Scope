@@ -1,0 +1,6 @@
+feedback,author,email
+"Valid row with all columns",Alice,alice@example.com
+"Row with missing column",Bob
+"Row with extra columns",Carol,carol@example.com,extra1,extra2
+,,
+"Another valid row after empty",Dave,dave@example.com
