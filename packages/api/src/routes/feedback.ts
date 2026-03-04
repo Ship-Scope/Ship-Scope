@@ -1,83 +1,113 @@
-import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
-import { z } from "zod";
-import { parse } from "csv-parse/sync";
-import multer from "multer";
+import { Router, type Request, type Response, type NextFunction } from 'express';
+import { parse } from 'csv-parse/sync';
+import multer from 'multer';
+import { prisma } from '../lib/prisma';
+import { validate } from '../middleware/validate';
+import { feedbackService } from '../services/feedback.service';
+import {
+  createFeedbackSchema,
+  feedbackQuerySchema,
+  bulkDeleteSchema,
+} from '../schemas/feedback.schema';
 
-const prisma = new PrismaClient();
 const upload = multer({ storage: multer.memoryStorage() });
-export const feedbackRouter = Router();
+const router = Router();
 
-// Schema for feedback items
-const feedbackSchema = z.object({
-  content: z.string().min(1),
-  author: z.string().optional(),
-  authorEmail: z.string().email().optional(),
-  channel: z.string().optional(),
-  externalId: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
-});
-
-// POST /api/feedback - Add single feedback item
-feedbackRouter.post("/", async (req, res) => {
-  try {
-    const data = feedbackSchema.parse(req.body);
-
-    // Create or get default source
-    const source = await prisma.feedbackSource.upsert({
-      where: { id: "api-default" },
-      update: {},
-      create: { id: "api-default", name: "API", type: "api" },
-    });
-
-    const item = await prisma.feedbackItem.create({
-      data: {
-        ...data,
-        sourceId: source.id,
-      },
-    });
-
-    res.status(201).json(item);
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: err.errors });
+// POST /api/feedback - Create a single feedback item
+router.post(
+  '/',
+  validate(createFeedbackSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const item = await feedbackService.create(req.body);
+      res.status(201).json(item);
+    } catch (err) {
+      next(err);
     }
-    throw err;
+  },
+);
+
+// GET /api/feedback - List feedback items with filtering and pagination
+router.get(
+  '/',
+  validate(feedbackQuerySchema, 'query'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await feedbackService.list(req.query as any);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// GET /api/feedback/stats - Get feedback statistics
+router.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const stats = await feedbackService.getStats();
+    res.json(stats);
+  } catch (err) {
+    next(err);
   }
 });
 
-// POST /api/feedback/bulk - Add multiple feedback items
-feedbackRouter.post("/bulk", async (req, res) => {
+// GET /api/feedback/:id - Get a single feedback item by ID
+router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const items = z.array(feedbackSchema).parse(req.body);
-
-    const source = await prisma.feedbackSource.upsert({
-      where: { id: "api-bulk" },
-      update: {},
-      create: { id: "api-bulk", name: "Bulk API", type: "api" },
-    });
-
-    const created = await prisma.feedbackItem.createMany({
-      data: items.map((item) => ({ ...item, sourceId: source.id })),
-    });
-
-    res.status(201).json({ count: created.count });
+    const item = await feedbackService.findById(req.params.id);
+    res.json(item);
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: "Validation failed", details: err.errors });
-    }
-    throw err;
+    next(err);
   }
 });
+
+// DELETE /api/feedback/:id - Delete a single feedback item
+router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await feedbackService.delete(req.params.id);
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/feedback/bulk-delete - Delete multiple feedback items
+router.post(
+  '/bulk-delete',
+  validate(bulkDeleteSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await feedbackService.bulkDelete(req.body.ids);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// POST /api/feedback/mark-processed - Mark feedback items as processed
+router.post('/mark-processed', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { ids } = req.body;
+    const result = await feedbackService.markAsProcessed(ids);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================
+// IMPORT ROUTES (to be updated by Task 02)
+// ============================================
 
 // POST /api/feedback/import/csv - Import from CSV file
-feedbackRouter.post("/import/csv", upload.single("file"), async (req, res) => {
+router.post('/import/csv', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
+      return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    const csvContent = req.file.buffer.toString("utf-8");
+    const csvContent = req.file.buffer.toString('utf-8');
     const records = parse(csvContent, {
       columns: true,
       skip_empty_lines: true,
@@ -85,23 +115,24 @@ feedbackRouter.post("/import/csv", upload.single("file"), async (req, res) => {
     });
 
     if (records.length === 0) {
-      return res.status(400).json({ error: "CSV file is empty" });
+      return res.status(400).json({ error: 'CSV file is empty' });
     }
 
     // Auto-detect the content column
     const firstRow = records[0];
     const contentColumn =
       Object.keys(firstRow).find((key) =>
-        ["content", "feedback", "text", "message", "comment", "body", "description"].includes(
-          key.toLowerCase()
-        )
+        ['content', 'feedback', 'text', 'message', 'comment', 'body', 'description'].includes(
+          key.toLowerCase(),
+        ),
       ) || Object.keys(firstRow)[0];
 
     const source = await prisma.feedbackSource.create({
       data: {
         name: `CSV Import - ${req.file.originalname}`,
-        type: "csv",
-        config: { filename: req.file.originalname, columns: Object.keys(firstRow) },
+        type: 'csv',
+        filename: req.file.originalname,
+        metadata: { columns: Object.keys(firstRow) },
       },
     });
 
@@ -109,14 +140,20 @@ feedbackRouter.post("/import/csv", upload.single("file"), async (req, res) => {
       .filter((row: Record<string, string>) => row[contentColumn]?.trim())
       .map((row: Record<string, string>) => ({
         content: row[contentColumn].trim(),
-        author: row["author"] || row["name"] || row["user"] || undefined,
-        authorEmail: row["email"] || row["author_email"] || undefined,
-        channel: row["channel"] || row["source"] || row["type"] || "csv",
+        author: row['author'] || row['name'] || row['user'] || undefined,
+        email: row['email'] || row['author_email'] || undefined,
+        channel: row['channel'] || row['source'] || row['type'] || 'csv',
         sourceId: source.id,
         metadata: row,
       }));
 
     const created = await prisma.feedbackItem.createMany({ data: items });
+
+    // Update source row count
+    await prisma.feedbackSource.update({
+      where: { id: source.id },
+      data: { rowCount: created.count },
+    });
 
     res.status(201).json({
       count: created.count,
@@ -125,58 +162,9 @@ feedbackRouter.post("/import/csv", upload.single("file"), async (req, res) => {
       message: `Imported ${created.count} feedback items from ${req.file.originalname}`,
     });
   } catch (err) {
-    console.error("CSV import error:", err);
-    res.status(500).json({ error: "Failed to import CSV" });
+    console.error('CSV import error:', err);
+    res.status(500).json({ error: 'Failed to import CSV' });
   }
 });
 
-// GET /api/feedback - List feedback items
-feedbackRouter.get("/", async (req, res) => {
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
-  const processed = req.query.processed === "true" ? true : req.query.processed === "false" ? false : undefined;
-
-  const [items, total] = await Promise.all([
-    prisma.feedbackItem.findMany({
-      where: processed !== undefined ? { processed } : undefined,
-      include: {
-        source: { select: { name: true, type: true } },
-        themes: { include: { theme: { select: { name: true } } } },
-      },
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * limit,
-      take: limit,
-    }),
-    prisma.feedbackItem.count({
-      where: processed !== undefined ? { processed } : undefined,
-    }),
-  ]);
-
-  res.json({
-    items,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
-  });
-});
-
-// GET /api/feedback/stats - Get feedback statistics
-feedbackRouter.get("/stats", async (_req, res) => {
-  const [total, processed, unprocessed, sources, channels] = await Promise.all([
-    prisma.feedbackItem.count(),
-    prisma.feedbackItem.count({ where: { processed: true } }),
-    prisma.feedbackItem.count({ where: { processed: false } }),
-    prisma.feedbackSource.findMany({
-      include: { _count: { select: { feedbackItems: true } } },
-    }),
-    prisma.feedbackItem.groupBy({
-      by: ["channel"],
-      _count: { id: true },
-    }),
-  ]);
-
-  res.json({ total, processed, unprocessed, sources, channels });
-});
+export default router;
