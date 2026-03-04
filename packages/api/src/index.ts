@@ -1,8 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
+import { createCorsMiddleware } from './middleware/cors';
 import { requestLogger } from './middleware/requestLogger';
+import { compressionMiddleware } from './middleware/compression';
+import { sanitizeMiddleware } from './middleware/sanitize';
+import { httpsRedirect } from './middleware/https-redirect';
 import { errorHandler } from './middleware/errorHandler';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
@@ -19,11 +22,38 @@ import dashboardRoutes from './routes/dashboard';
 export function createApp() {
   const app = express();
 
+  // Trust proxy for HTTPS redirect behind reverse proxy
+  app.set('trust proxy', 1);
+
   // Middleware (correct ordering)
+  app.use(httpsRedirect);
   app.use(requestLogger);
-  app.use(helmet());
-  app.use(cors({ origin: process.env.APP_URL || 'http://localhost:3000' }));
-  app.use(express.json({ limit: '50mb' }));
+  app.use(compressionMiddleware);
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+          connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:3000'],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+        },
+      },
+      frameguard: { action: 'deny' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      hsts:
+        process.env.NODE_ENV === 'production'
+          ? { maxAge: 31536000, includeSubDomains: true, preload: true }
+          : false,
+    }),
+  );
+  app.use(createCorsMiddleware());
+  app.use(express.json({ limit: '10mb' }));
+  app.use(sanitizeMiddleware);
 
   // Routes
   app.use('/api/health', healthRoutes);
