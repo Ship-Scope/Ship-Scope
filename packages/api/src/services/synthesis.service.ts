@@ -129,6 +129,7 @@ export async function runSynthesisPipeline(jobId: string): Promise<void> {
     const embeddedItems = await getEmbeddedItems();
     const clusters = agglomerativeCluster(
       embeddedItems.map((item) => ({ id: item.id, embedding: item.embedding })),
+      0.65, // Lowered from 0.82 — seed data similarity peaks at ~0.74
     );
     logger.info('Synthesis: clustering done', { clusters: clusters.length });
 

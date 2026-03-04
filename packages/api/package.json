@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc && tsc-alias",
-    "start": "node dist/index.js",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "start": "node dist/api/src/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx prisma db seed",
     "test": "vitest run",
@@ -43,6 +43,7 @@
     "@types/supertest": "^7.2.0",
     "prisma": "^5.14.0",
     "supertest": "^7.2.2",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.11.0",
     "typescript": "^5.4.0",
     "vitest-mock-extended": "^3.1.0"

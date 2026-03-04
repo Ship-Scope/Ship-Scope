@@ -41,14 +41,12 @@ export function createApp() {
           connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:3000'],
           frameSrc: ["'none'"],
           objectSrc: ["'none'"],
+          upgradeInsecureRequests: null,
         },
       },
       frameguard: { action: 'deny' },
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-      hsts:
-        process.env.NODE_ENV === 'production'
-          ? { maxAge: 31536000, includeSubDomains: true, preload: true }
-          : false,
+      hsts: false, // Enable only behind a real HTTPS termination proxy
     }),
   );
   app.use(createCorsMiddleware());
@@ -73,6 +71,10 @@ export function createApp() {
 
 // Only listen when run directly
 if (process.env.NODE_ENV !== 'test') {
+  // Start BullMQ workers
+  import('./workers/synthesis.worker').then(() => logger.info('Synthesis worker started'));
+  import('./workers/import.worker').then(() => logger.info('Import worker started'));
+
   const PORT = process.env.PORT || 4000;
   const app = createApp();
   app.listen(PORT, () => {

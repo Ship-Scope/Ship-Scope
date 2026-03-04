@@ -5,20 +5,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy workspace root files
-COPY package.json package-lock.json tsconfig.json ./
+# Copy workspace root files (no lockfile — resolves platform-native packages)
+COPY package.json tsconfig.json ./
 COPY packages/core/package.json ./packages/core/
 COPY packages/web/package.json ./packages/web/
 
 # Install dependencies
-RUN npm ci --workspace=packages/core --workspace=packages/web --include-workspace-root
+# --ignore-scripts skips the husky prepare hook which isn't needed in Docker
+RUN npm install --workspace=packages/core --workspace=packages/web --include-workspace-root --ignore-scripts
 
 # Copy source
 COPY packages/core/ ./packages/core/
 COPY packages/web/ ./packages/web/
 
-# Build core first (web imports shared types), then web
-RUN npm run build --workspace=packages/core
+# Build web (core is types-only, no build needed)
 RUN npm run build --workspace=packages/web
 
 # ============================================================

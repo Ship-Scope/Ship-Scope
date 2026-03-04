@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "paths": {
+      "@shipscope/core": ["../core/src"],
+      "@shipscope/core/*": ["../core/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "../core/src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests", "**/*.test.ts", "**/*.spec.ts"]
+}
