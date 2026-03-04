@@ -1,0 +1,13 @@
+[
+  {
+    "content": "Need better export options for reports and dashboards",
+    "author": "Alice",
+    "channel": "survey"
+  },
+  { "content": "The mobile app crashes on Android 14 when opening settings", "author": "Bob" },
+  {
+    "content": "Please add integration with Slack for real-time notifications",
+    "email": "carol@example.com",
+    "channel": "interview"
+  }
+]

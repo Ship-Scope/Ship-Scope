@@ -1,0 +1,6 @@
+feedback,author,email,channel,date
+"The app is great but needs dark mode",John Doe,john@example.com,survey,2024-01-15
+"Bulk export is broken for large datasets",Sarah Smith,sarah@example.com,support_ticket,2024-01-16
+"Love the new dashboard feature",Mike Johnson,,slack,2024-01-17
+"The search function is too slow when filtering by date range",Emily Chen,emily@example.com,app_review,2024-01-18
+"Please add keyboard shortcuts for common actions",Alex Kim,alex@example.com,interview,2024-01-19
