@@ -24,7 +24,7 @@ function parseSentimentFilter(value: string): { min?: number; max?: number } {
   return {};
 }
 
-export function FeedbackPage() {
+export default function FeedbackPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());

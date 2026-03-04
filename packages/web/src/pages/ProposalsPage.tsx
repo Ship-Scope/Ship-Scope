@@ -26,7 +26,7 @@ const SORT_OPTIONS = [
   { value: 'effortScore', label: 'Effort' },
 ] as const;
 
-export function ProposalsPage() {
+export default function ProposalsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 

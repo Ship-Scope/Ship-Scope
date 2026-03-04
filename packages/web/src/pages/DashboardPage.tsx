@@ -16,7 +16,7 @@ import {
   useSentimentDistribution,
 } from '@/hooks/useDashboard';
 
-export function DashboardPage() {
+export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: activity, isLoading: activityLoading } = useActivityFeed();
   const { data: topThemes, isLoading: themesLoading } = useTopThemes();

@@ -7,7 +7,7 @@ import { SpecCard } from '@/components/specs/SpecCard';
 import { SpecDetail } from '@/components/specs/SpecDetail';
 import { useSpecsList } from '@/hooks/useSpecs';
 
-export function SpecsPage() {
+export default function SpecsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { data: specs, isLoading } = useSpecsList();
 

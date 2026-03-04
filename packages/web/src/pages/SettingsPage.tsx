@@ -20,7 +20,7 @@ const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: 'about', label: 'About', icon: <Info size={16} /> },
 ];
 
-export function SettingsPage() {
+export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<Section>('ai');
   const { data: settings, isLoading } = useSettings();
   const updateMutation = useUpdateSettings();

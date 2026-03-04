@@ -1,26 +1,19 @@
-<p align="center">
-  <img src="docs/logo-placeholder.png" alt="ShipScope" width="120" />
-</p>
+<div align="center">
 
-<h1 align="center">ShipScope</h1>
+<img src="docs/logo-placeholder.png" alt="ShipScope" width="120" />
 
-<p align="center">
-  <strong>Open-source AI that analyzes customer feedback and tells you what to build next.</strong>
-</p>
+# ShipScope
 
-<p align="center">
-  <a href="https://shipscope.dev">Website</a> ·
-  <a href="#quick-start">Quick Start</a> ·
-  <a href="docs/">Docs</a> ·
-  <a href="https://github.com/shipscope/shipscope/issues">Issues</a> ·
-  <a href="https://discord.gg/shipscope">Discord</a>
-</p>
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker)](docker-compose.prod.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript)](tsconfig.json)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js)](package.json)
 
-<p align="center">
-  <a href="https://github.com/shipscope/shipscope/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue" alt="License" /></a>
-  <a href="https://github.com/shipscope/shipscope/stargazers"><img src="https://img.shields.io/github/stars/shipscope/shipscope?style=social" alt="GitHub Stars" /></a>
-  <a href="https://discord.gg/shipscope"><img src="https://img.shields.io/discord/000000000?label=discord" alt="Discord" /></a>
-</p>
+**Know what to build, not just how.**
+
+[Quick Start](#quick-start) | [Self-Hosting](docs/self-hosting.md) | [API Reference](docs/api-reference.md) | [Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
@@ -36,122 +29,82 @@ ShipScope ingests all your customer feedback, uses AI to find patterns, and tell
 Customer Feedback → AI Synthesis → Feature Proposals → Agent-Ready Specs
 ```
 
-### How it works
+## Features
 
-1. **Ingest** — Connect support tickets, interview transcripts, surveys, Slack messages, analytics, or import via CSV/API
-2. **Synthesize** — AI clusters feedback into themes, extracts pain points, and scores opportunities
-3. **Propose** — Get prioritized feature proposals backed by real user evidence ("142 users asked for this, power users 3x more likely to request it")
-4. **Specify** — Generate full PRDs, user stories, and development tasks ready for your coding agent
-5. **Ship** — Export to Linear, Jira, or GitHub Issues. Hand off specs to Cursor/Claude Code for implementation
+- **Feedback Ingestion** — Import from CSV, JSON, manual entry, or webhooks
+- **AI Theme Discovery** — Automatically clusters similar feedback into themes using embeddings
+- **Smart Proposals** — AI-generated feature proposals with RICE prioritization
+- **Evidence Linking** — Every proposal is backed by real customer feedback
+- **Spec Generation** — Generate PRDs and agent-ready prompts from approved proposals
+- **Dashboard** — Overview of feedback volume, sentiment trends, and top themes
+- **Settings** — AI config, synthesis tuning, data management, API key management
 
 ## Quick Start
 
-### Self-hosted (Docker)
+### Prerequisites
+
+- Docker >= 24.0 and Docker Compose >= 2.20
+- OpenAI API key
+
+### Run with Docker (Production)
 
 ```bash
-git clone https://github.com/shipscope/shipscope.git
-cd shipscope
-cp .env.example .env  # Add your OpenAI/Anthropic API key
-docker compose up -d
+git clone https://github.com/Ship-Scope/Ship-Scope.git
+cd Ship-Scope
+cp .env.production.example .env.production
+# Edit .env.production with your values
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 ```
 
-Open `http://localhost:3000` — your data stays on your infrastructure.
+Open http://localhost:3000
 
-### Development Setup
+### Run for Development
 
 ```bash
-# Prerequisites: Node.js 20+, PostgreSQL 16+, Redis
-
-git clone https://github.com/shipscope/shipscope.git
-cd shipscope
+git clone https://github.com/Ship-Scope/Ship-Scope.git
+cd Ship-Scope
 npm install
-cp .env.example .env
-
-# Setup database
-npx prisma migrate dev
-
-# Start all services
-npm run dev
+docker compose up -d  # Start PostgreSQL + Redis
+npm run db:migrate
+npm run dev           # Start API + Web dev servers
 ```
+
+API runs at http://localhost:4000, Web at http://localhost:3000.
 
 ## Architecture
 
 ```
-shipscope/
-├── packages/
-│   ├── web/          # React + TypeScript frontend (Vite)
-│   ├── api/          # Node.js + Express backend
-│   └── core/         # AI engine (ingestion, synthesis, proposals)
-├── docs/             # Documentation
-├── scripts/          # Setup and utility scripts
-├── docker-compose.yml
-└── .env.example
+packages/
+├── core/    → Shared TypeScript types and schemas
+├── api/     → Express + Prisma + BullMQ backend
+└── web/     → React 18 + Vite + Tailwind frontend
 ```
 
-**Tech Stack:**
-- **Frontend:** React 18, TypeScript, Tailwind CSS, Vite
-- **Backend:** Node.js, Express, Prisma ORM
-- **Database:** PostgreSQL + pgvector (embeddings)
-- **Queue:** Redis + BullMQ (background jobs)
-- **AI:** OpenAI / Anthropic API (BYO key)
+See [docs/architecture.md](docs/architecture.md) for the full system design.
 
-## Features
+## Tech Stack
 
-### Available Now (v0.1)
-- [ ] CSV/JSON feedback import
-- [ ] Webhook API for real-time ingestion
-- [ ] AI-powered feedback clustering and theme extraction
-- [ ] Pain point identification with evidence linking
-- [ ] Opportunity scoring (volume x segment value x urgency)
-- [ ] Feature proposal generation with evidence
-- [ ] Basic PRD generation
-- [ ] Self-hosted Docker deployment
+| Layer          | Technology                                               |
+| -------------- | -------------------------------------------------------- |
+| Frontend       | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
+| Backend        | Express, Prisma, PostgreSQL 16 (pgvector), Redis, BullMQ |
+| AI             | OpenAI (gpt-4o-mini, text-embedding-3-small)             |
+| Infrastructure | Docker, Docker Compose, nginx                            |
 
-### Coming Soon
-- [ ] Native integrations (Intercom, Zendesk, Slack, Discord)
-- [ ] Analytics connectors (Mixpanel, Amplitude, PostHog)
-- [ ] Interview transcript processing (audio to insights)
-- [ ] Advanced prioritization frameworks (RICE, MoSCoW, custom)
-- [ ] Agent-ready spec export (Cursor, Claude Code prompts)
-- [ ] Linear / Jira / GitHub Issues export
-- [ ] Team collaboration and workspaces
-- [ ] SSO/SAML for enterprise
+## Documentation
 
-## Configuration
-
-ShipScope uses environment variables for configuration:
-
-```bash
-# Required
-DATABASE_URL=postgresql://user:pass@localhost:5432/shipscope
-REDIS_URL=redis://localhost:6379
-
-# AI Provider (choose one or both)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-
-# Optional
-AI_MODEL=gpt-4o              # or claude-sonnet-4-20250514
-EMBEDDING_MODEL=text-embedding-3-small
-PORT=3000
-```
+- [Self-Hosting Guide](docs/self-hosting.md) — Deploy ShipScope on your infrastructure
+- [API Reference](docs/api-reference.md) — Complete REST API documentation
+- [Architecture](docs/architecture.md) — System design and data flow
+- [Contributing](CONTRIBUTING.md) — How to contribute to ShipScope
 
 ## Contributing
 
-We love contributions! ShipScope is built by the community, for the community.
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) before getting started.
 
-Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before getting started.
-
-- Report bugs — [Open an issue](https://github.com/shipscope/shipscope/issues/new?template=bug_report.md)
-- Request features — [Open an issue](https://github.com/shipscope/shipscope/issues/new?template=feature_request.md)
-- Improve docs — [docs/](docs/)
-- Submit a PR — [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## Community
-
-- [Discord](https://discord.gg/shipscope) — Chat with the team and other users
-- [Twitter/X](https://twitter.com/shipscope) — Updates and announcements
-- [Star us on GitHub](https://github.com/shipscope/shipscope) — It helps more than you think!
+- [Report a bug](https://github.com/Ship-Scope/Ship-Scope/issues/new?template=bug_report.md)
+- [Request a feature](https://github.com/Ship-Scope/Ship-Scope/issues/new?template=feature_request.md)
+- [Submit a PR](CONTRIBUTING.md)
 
 ## License
 
@@ -160,8 +113,6 @@ ShipScope is open-source under the [AGPL-3.0 license](LICENSE).
 - Free to use, modify, and self-host
 - Free for commercial use within your organization
 - If you modify and distribute as a service, you must open-source your changes
-
-For enterprise licensing, contact hello@shipscope.dev.
 
 ---
 
