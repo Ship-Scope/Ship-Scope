@@ -19,3 +19,9 @@ export interface SpecWithProposal extends Spec {
 export interface GenerateSpecInput {
   proposalId: string;
 }
+
+export interface SpecGenerationResult {
+  spec: SpecWithProposal;
+  isRegeneration: boolean;
+  previousVersion: number | null;
+}

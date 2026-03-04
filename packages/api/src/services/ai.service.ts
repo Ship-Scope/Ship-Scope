@@ -61,6 +61,38 @@ export async function chatCompletion<T = unknown>(
   }
 }
 
+/** Send a chat completion request and return raw text (for markdown/free-form output). */
+export async function chatCompletionText(
+  systemPrompt: string,
+  userPrompt: string,
+): Promise<string> {
+  const response = await openai.chat.completions.create({
+    model: AI_CONFIG.chatModel,
+    temperature: 0.3,
+    max_tokens: 8192,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('Empty response from AI model');
+  }
+
+  if (response.usage) {
+    const usage: TokenUsage = {
+      promptTokens: response.usage.prompt_tokens,
+      completionTokens: response.usage.completion_tokens,
+      totalTokens: response.usage.total_tokens,
+    };
+    tokenTracker.track(AI_CONFIG.chatModel, 'chat', usage);
+  }
+
+  return content;
+}
+
 /** Get current token usage stats for the session. */
 export function getTokenStats() {
   return tokenTracker.getSessionStats();

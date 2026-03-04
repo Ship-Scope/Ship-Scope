@@ -1,3 +1,9 @@
 export { buildScoringPrompt, buildThemeExtractionPrompt } from './synthesis';
 export { buildProposalPrompt } from './proposals';
-export { buildPRDPrompt, buildAgentPrompt } from './specs';
+export {
+  buildPRDSystemPrompt,
+  buildPRDPrompt,
+  buildAgentPrompt,
+  extractSection,
+  PRD_SECTIONS,
+} from './specs';
