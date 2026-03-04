@@ -6,6 +6,7 @@ import { embedFeedbackItems, getEmbeddedItems } from './embedding.service';
 import { scoreFeedbackItems } from './scoring.service';
 import { agglomerativeCluster } from './clustering.service';
 import { extractThemes } from './theme.service';
+import { activityService } from './activity.service';
 
 const SYNTHESIS_STATUS_KEY = 'synthesis:status';
 
@@ -164,6 +165,12 @@ export async function runSynthesisPipeline(jobId: string): Promise<void> {
       scored: scoreResult.scored,
       clusters: clusters.length,
       themes: themeResult.created,
+    });
+
+    await activityService.log({
+      type: 'synthesis',
+      description: `Synthesis complete: ${themeResult.created} themes discovered from ${embedResult.embedded} items`,
+      metadata: { themeCount: themeResult.created, feedbackCount: embedResult.embedded },
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

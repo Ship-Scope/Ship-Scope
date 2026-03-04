@@ -14,6 +14,7 @@ import {
   updateProposalSchema,
 } from '../schemas/proposal.schema';
 import { AppError } from '../lib/errors';
+import { activityService } from '../services/activity.service';
 
 const router = Router();
 
@@ -34,6 +35,16 @@ router.post(
         // Non-fatal: evidence linking failure shouldn't fail the response
       }
     }
+
+    await activityService.log({
+      type: 'proposal_generation',
+      description: `Generated ${result.proposalsCreated} proposals (${result.proposalsSkipped} skipped)`,
+      metadata: {
+        created: result.proposalsCreated,
+        skipped: result.proposalsSkipped,
+        errors: result.errors.length,
+      },
+    });
 
     res.status(201).json({ data: result });
   },
