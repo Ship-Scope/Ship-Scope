@@ -48,3 +48,6 @@ tmp/
 
 # Dev plan
 # dev-plan/
+
+# Core compiled JS (types-only package)
+packages/core/src/**/*.js
