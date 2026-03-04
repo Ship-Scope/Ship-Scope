@@ -24,7 +24,7 @@ export function SpecDetail({ spec, onClose }: SpecDetailProps) {
   const filename =
     activeTab === 'prd'
       ? `${spec.proposal.title.replace(/\s+/g, '-').toLowerCase()}-prd-v${spec.version}.md`
-      : `${spec.proposal.title.replace(/\s+/g, '-').toLowerCase()}-${promptFormat}-prompt.md`;
+      : `${spec.proposal.title.replace(/\s+/g, '-').toLowerCase()}-cursor-prompt.md`;
 
   return (
     <div className="fixed top-0 right-0 h-full w-[480px] bg-bg-surface border-l border-border flex flex-col z-50">
