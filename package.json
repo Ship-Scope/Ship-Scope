@@ -16,17 +16,45 @@
     "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
     "dev:web": "npm run dev --workspace=packages/web",
     "dev:api": "npm run dev --workspace=packages/api",
-    "build": "npm run build --workspaces",
-    "lint": "eslint packages/*/src --ext .ts,.tsx",
-    "test": "vitest",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "eslint 'packages/*/src/**/*.{ts,tsx}'",
+    "lint:fix": "eslint 'packages/*/src/**/*.{ts,tsx}' --fix",
+    "format": "prettier --write 'packages/*/src/**/*.{ts,tsx,json,css}'",
+    "format:check": "prettier --check 'packages/*/src/**/*.{ts,tsx,json,css}'",
+    "typecheck": "tsc --noEmit -p packages/core/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json",
+    "test": "npm run test --workspace=packages/api",
+    "test:coverage": "npm run test:coverage --workspace=packages/api",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:reset": "docker compose down -v && docker compose up -d",
     "db:migrate": "npm run db:migrate --workspace=packages/api",
     "db:seed": "npm run db:seed --workspace=packages/api",
-    "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "db:studio": "cd packages/api && npx prisma studio",
+    "db:reset": "bash scripts/reset-db.sh",
+    "setup": "bash scripts/setup.sh",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   },
   "devDependencies": {
+    "@esbuild/darwin-arm64": "^0.27.3",
+    "@typescript-eslint/eslint-plugin": "^8.56.1",
+    "@typescript-eslint/parser": "^8.56.1",
     "concurrently": "^8.2.0",
     "eslint": "^8.57.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.2.0",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"
