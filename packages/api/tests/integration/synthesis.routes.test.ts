@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createTestApp } from '../helpers/test-app';
 import { createFeedbackSource, createFeedbackItem, createTheme } from '../helpers/factories';
 import { prisma } from '../setup';
+import { redis } from '../../src/lib/redis';
 
 const app = createTestApp();
+
+beforeEach(async () => {
+  await redis.del('synthesis:status');
+});
 
 describe('Synthesis Routes', () => {
   describe('GET /api/synthesis/status', () => {

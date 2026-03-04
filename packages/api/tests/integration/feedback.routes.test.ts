@@ -108,6 +108,7 @@ describe('Feedback Routes', () => {
       const source = await createFeedbackSource();
       const item1 = await createFeedbackItem(source.id, { content: 'First created feedback item' });
       // Small delay so createdAt differs
+      await new Promise((r) => setTimeout(r, 50));
       const item2 = await createFeedbackItem(source.id, {
         content: 'Second created feedback item',
       });
