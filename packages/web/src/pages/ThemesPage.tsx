@@ -31,7 +31,7 @@ const CATEGORY_OPTIONS = [
   { value: 'other', label: 'Other' },
 ];
 
-export function ThemesPage() {
+export default function ThemesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
 
