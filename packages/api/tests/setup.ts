@@ -24,6 +24,8 @@ beforeEach(async () => {
     prisma.feedbackItem.deleteMany(),
     prisma.feedbackSource.deleteMany(),
     prisma.apiKey.deleteMany(),
+    prisma.activityLog.deleteMany(),
+    prisma.setting.deleteMany(),
   ]);
 });
 

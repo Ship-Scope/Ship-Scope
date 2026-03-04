@@ -9,6 +9,7 @@ import {
   feedbackQuerySchema,
   bulkDeleteSchema,
 } from '../schemas/feedback.schema';
+import { activityService } from '../services/activity.service';
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = Router();
@@ -153,6 +154,12 @@ router.post('/import/csv', upload.single('file'), async (req: Request, res: Resp
     await prisma.feedbackSource.update({
       where: { id: source.id },
       data: { rowCount: created.count },
+    });
+
+    await activityService.log({
+      type: 'import',
+      description: `Imported ${created.count} feedback items from ${req.file.originalname}`,
+      metadata: { count: created.count, format: 'csv', filename: req.file.originalname },
     });
 
     res.status(201).json({

@@ -177,3 +177,30 @@ model ApiKey {
 
   @@index([keyHash])
 }
+
+// ============================================
+// ACTIVITY LOG
+// ============================================
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  type        String   // 'import', 'synthesis', 'proposal_generation', 'spec_generation'
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("activity_log")
+}
+
+// ============================================
+// SETTINGS (Key-Value Store)
+// ============================================
+
+model Setting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}

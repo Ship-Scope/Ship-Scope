@@ -11,6 +11,7 @@ import { NotFound, BadRequest, Conflict } from '../lib/errors';
 import { logger } from '../lib/logger';
 import { prisma } from '../lib/prisma';
 import { chatCompletionText } from './ai.service';
+import { activityService } from './activity.service';
 
 // ─── Concurrency Guard ───────────────────────────────────
 
@@ -148,6 +149,12 @@ export async function generateSpec(proposalId: string) {
         include: { proposal: true },
       });
     }
+
+    await activityService.log({
+      type: 'spec_generation',
+      description: `Generated spec v${spec.version} for "${proposal.title}"`,
+      metadata: { specId: spec.id, proposalId, version: spec.version },
+    });
 
     return {
       spec,
