@@ -153,3 +153,64 @@ export const importApi = {
   jobStatus: (jobId: string) =>
     api.get<ImportJobStatus>(`/feedback/import/${jobId}`).then((r) => r.data),
 };
+
+// ============================================
+// Themes & Synthesis API
+// ============================================
+
+export interface ThemeItem {
+  id: string;
+  name: string;
+  description: string;
+  category: string | null;
+  painPoints: string[];
+  feedbackCount: number;
+  avgSentiment: number;
+  avgUrgency: number;
+  opportunityScore: number;
+  createdAt: string;
+  updatedAt: string;
+  feedbackItems: {
+    feedbackItem: {
+      id: string;
+      content: string;
+      author: string | null;
+      sentiment: number | null;
+      urgency: number | null;
+    };
+    similarityScore: number;
+  }[];
+}
+
+export interface ThemesQueryParams {
+  page?: number;
+  pageSize?: number;
+  category?: string;
+  sortBy?: 'opportunityScore' | 'feedbackCount' | 'avgSentiment' | 'avgUrgency' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface SynthesisStatus {
+  jobId: string;
+  status: 'idle' | 'embedding' | 'scoring' | 'clustering' | 'naming' | 'completed' | 'failed';
+  progress: number;
+  stage: string;
+  totalItems: number;
+  processedItems: number;
+  themesFound: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  error: string | null;
+}
+
+export const synthesisApi = {
+  run: () => api.post<{ data: { jobId: string } }>('/synthesis/run').then((r) => r.data.data),
+
+  status: () => api.get<{ data: SynthesisStatus }>('/synthesis/status').then((r) => r.data.data),
+
+  themes: (params: ThemesQueryParams) =>
+    api.get<PaginatedResponse<ThemeItem>>('/synthesis/themes', { params }).then((r) => r.data),
+
+  theme: (id: string) =>
+    api.get<{ data: ThemeItem }>(`/synthesis/themes/${id}`).then((r) => r.data.data),
+};
