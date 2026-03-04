@@ -15,9 +15,11 @@ datasource db {
 
 model FeedbackSource {
   id        String   @id @default(cuid())
-  name      String   // "Intercom", "CSV Upload", "Slack", etc.
-  type      String   // csv, api, intercom, zendesk, slack, manual
-  config    Json?    // Connection config (API keys stored encrypted)
+  name      String
+  type      String   // csv, json, api, webhook, manual
+  filename  String?
+  rowCount  Int      @default(0)
+  metadata  Json     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -26,22 +28,21 @@ model FeedbackSource {
 
 model FeedbackItem {
   id        String   @id @default(cuid())
-  content   String   // The raw feedback text
+  content   String   @db.Text
   sourceId  String
   source    FeedbackSource @relation(fields: [sourceId], references: [id])
 
   // Metadata
-  author      String?  // Customer name/ID
-  authorEmail String?
-  sentiment   Float?   // -1 to 1 sentiment score
-  urgency     Float?   // 0 to 1 urgency score
-  channel     String?  // "support_ticket", "interview", "survey", "slack"
-  externalId  String?  // ID in the source system
-  metadata    Json?    // Any additional structured data
+  author    String?
+  email     String?
+  channel   String?  // support_ticket, interview, survey, slack, app_review, manual, other
+  metadata  Json     @default("{}")
 
   // AI Processing
-  embedding   Unsupported("vector(1536)")?  // OpenAI text-embedding-3-small
-  processed   Boolean  @default(false)
+  sentiment   Float?
+  urgency     Float?
+  embedding   Unsupported("vector(1536)")?
+  embeddedAt  DateTime?
   processedAt DateTime?
 
   // Relations
@@ -52,8 +53,11 @@ model FeedbackItem {
   updatedAt DateTime @updatedAt
 
   @@index([sourceId])
-  @@index([processed])
   @@index([channel])
+  @@index([createdAt])
+  @@index([processedAt])
+  @@index([sentiment])
+  @@index([urgency])
 }
 
 // ============================================
@@ -62,15 +66,16 @@ model FeedbackItem {
 
 model Theme {
   id          String   @id @default(cuid())
-  name        String   // AI-generated theme name
-  description String   // What this theme is about
-  category    String?  // "bug", "feature_request", "ux_issue", "performance"
-  
+  name        String
+  description String   @db.Text
+  category    String?  // bug, feature_request, ux_issue, performance
+
   // Scoring
-  feedbackCount Int    @default(0)
-  avgSentiment  Float? 
-  avgUrgency    Float?
-  score         Float? // Composite opportunity score
+  painPoints       String[]
+  feedbackCount    Int    @default(0)
+  avgSentiment     Float  @default(0)
+  avgUrgency       Float  @default(0)
+  opportunityScore Float  @default(0)
 
   // Relations
   feedbackItems FeedbackThemeLink[]
@@ -78,17 +83,20 @@ model Theme {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([category])
+  @@index([opportunityScore])
 }
 
 model FeedbackThemeLink {
-  id         String       @id @default(cuid())
-  feedbackId String
-  themeId    String
-  confidence Float        @default(1.0) // How confident the AI is about this link
-  feedback   FeedbackItem @relation(fields: [feedbackId], references: [id])
-  theme      Theme        @relation(fields: [themeId], references: [id])
+  id              String       @id @default(cuid())
+  feedbackItemId  String
+  themeId         String
+  similarityScore Float        @default(1.0)
+  feedbackItem    FeedbackItem @relation(fields: [feedbackItemId], references: [id])
+  theme           Theme        @relation(fields: [themeId], references: [id])
 
-  @@unique([feedbackId, themeId])
+  @@unique([feedbackItemId, themeId])
 }
 
 // ============================================
@@ -97,17 +105,16 @@ model FeedbackThemeLink {
 
 model Proposal {
   id          String  @id @default(cuid())
-  title       String  // "Add bulk export functionality"
-  description String  // Detailed description of the proposed feature
-  problem     String  // The problem this solves
-  solution    String  // Proposed solution
+  title       String
+  problem     String  @db.Text
+  solution    String  @db.Text
 
-  // Prioritization
-  impactScore   Float?  // Estimated impact (0-10)
-  effortScore   Float?  // Estimated effort (0-10)  
-  confidenceScore Float? // How confident are we (0-10)
-  reachScore    Float?  // How many users affected (0-10)
-  riceScore     Float?  // Computed RICE score
+  // RICE Scoring
+  reachScore      Int?
+  impactScore     Int?
+  confidenceScore Int?
+  effortScore     Int?
+  riceScore       Float?
 
   // Status
   status      String  @default("proposed") // proposed, approved, rejected, shipped
@@ -126,15 +133,15 @@ model Proposal {
 }
 
 model ProposalEvidence {
-  id         String       @id @default(cuid())
-  proposalId String
-  feedbackId String
-  relevance  Float        @default(1.0)
-  quote      String?      // Key quote from the feedback
-  proposal   Proposal     @relation(fields: [proposalId], references: [id])
-  feedback   FeedbackItem @relation(fields: [feedbackId], references: [id])
+  id              String       @id @default(cuid())
+  proposalId      String
+  feedbackItemId  String
+  relevanceScore  Float        @default(1.0)
+  quote           String?      @db.Text
+  proposal        Proposal     @relation(fields: [proposalId], references: [id])
+  feedbackItem    FeedbackItem @relation(fields: [feedbackItemId], references: [id])
 
-  @@unique([proposalId, feedbackId])
+  @@unique([proposalId, feedbackItemId])
 }
 
 // ============================================
@@ -142,23 +149,31 @@ model ProposalEvidence {
 // ============================================
 
 model Spec {
-  id         String   @id @default(cuid())
-  proposalId String
-  proposal   Proposal @relation(fields: [proposalId], references: [id])
-  
-  // Generated content
-  prd          String?  // Full PRD markdown
-  userStories  Json?    // Array of user stories
-  acceptanceCriteria Json? // Array of acceptance criteria
-  dataModel    String?  // Data model changes
-  apiSpec      String?  // API endpoint specifications
-  taskBreakdown Json?   // Development tasks
-  agentPrompt  String?  // Ready-to-use prompt for Cursor/Claude Code
+  id          String   @id @default(cuid())
+  proposalId  String   @unique
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
 
-  // Export
-  exportedTo   String?  // "linear", "jira", "github"
-  exportedAt   DateTime?
+  // Generated content
+  prdMarkdown  String?  @db.Text
+  agentPrompt  String?  @db.Text
+  version      Int      @default(1)
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ============================================
+// API KEYS (Webhook Authentication)
+// ============================================
+
+model ApiKey {
+  id          String   @id @default(cuid())
+  name        String   @default("Default")
+  keyHash     String   @unique
+  keyPrefix   String
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  isActive    Boolean  @default(true)
+
+  @@index([keyHash])
 }
