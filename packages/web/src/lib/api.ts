@@ -282,3 +282,50 @@ export const proposalsApi = {
 
   delete: (id: string) => api.delete(`/proposals/${id}`),
 };
+
+// ============================================
+// Specs API
+// ============================================
+
+export interface SpecItem {
+  id: string;
+  proposalId: string;
+  prdMarkdown: string | null;
+  agentPrompt: string | null;
+  version: number;
+  proposal: {
+    id: string;
+    title: string;
+    status: string;
+    riceScore: number | null;
+    problem?: string;
+    solution?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SpecGenerationResult {
+  spec: SpecItem;
+  isRegeneration: boolean;
+  previousVersion: number | null;
+}
+
+export const specsApi = {
+  generate: (proposalId: string) =>
+    api
+      .post<{ data: SpecGenerationResult }>(`/specs/generate/${proposalId}`)
+      .then((r) => r.data.data),
+
+  list: () => api.get<{ data: SpecItem[] }>('/specs').then((r) => r.data.data),
+
+  get: (id: string) => api.get<{ data: SpecItem }>(`/specs/${id}`).then((r) => r.data.data),
+
+  getByProposal: (proposalId: string) =>
+    api.get<{ data: SpecItem }>(`/specs/by-proposal/${proposalId}`).then((r) => r.data.data),
+
+  getAgentPrompt: (specId: string, format: 'cursor' | 'claude_code' = 'cursor') =>
+    api
+      .get<{ data: string }>(`/specs/${specId}/agent-prompt`, { params: { format } })
+      .then((r) => r.data.data),
+};

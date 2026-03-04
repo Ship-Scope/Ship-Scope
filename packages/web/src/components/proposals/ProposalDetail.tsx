@@ -1,9 +1,10 @@
-import { X, Check, XCircle, Rocket, RotateCcw } from 'lucide-react';
+import { X, Check, XCircle, Rocket, RotateCcw, FileText } from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { RICEScoreDisplay } from './RICEScoreDisplay';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useProposalDetail, useUpdateProposal, useDeleteProposal } from '@/hooks/useProposals';
+import { useGenerateSpec, useSpecByProposal } from '@/hooks/useSpecs';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 
 interface ProposalDetailProps {
@@ -36,6 +37,8 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
   const { data: proposal, isLoading } = useProposalDetail(proposalId);
   const updateMutation = useUpdateProposal();
   const deleteMutation = useDeleteProposal();
+  const generateSpecMutation = useGenerateSpec();
+  const { data: existingSpec } = useSpecByProposal(proposalId);
 
   if (isLoading) {
     return (
@@ -81,6 +84,35 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
                 {action.label}
               </Button>
             ))}
+          </div>
+        )}
+
+        {/* Generate Spec */}
+        {proposal.status === 'approved' && (
+          <div>
+            {existingSpec ? (
+              <p className="text-xs text-text-muted">
+                <FileText className="w-3 h-3 inline mr-1" />
+                Spec v{existingSpec.version} generated &middot;{' '}
+                <button
+                  className="text-accent-blue hover:underline"
+                  onClick={() => generateSpecMutation.mutate(proposal.id)}
+                  disabled={generateSpecMutation.isPending}
+                >
+                  {generateSpecMutation.isPending ? 'Regenerating...' : 'Regenerate'}
+                </button>
+              </p>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={generateSpecMutation.isPending}
+                onClick={() => generateSpecMutation.mutate(proposal.id)}
+              >
+                <FileText size={14} />
+                Generate Spec
+              </Button>
+            )}
           </div>
         )}
 
