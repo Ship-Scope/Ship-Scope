@@ -14,6 +14,7 @@ import proposalRoutes from './routes/proposals';
 import specRoutes from './routes/specs';
 import webhookRoutes from './routes/webhook';
 import settingsRoutes from './routes/settings';
+import dashboardRoutes from './routes/dashboard';
 
 export function createApp() {
   const app = express();
@@ -32,6 +33,7 @@ export function createApp() {
   app.use('/api/specs', specRoutes);
   app.use('/api/feedback/webhook', webhookRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/dashboard', dashboardRoutes);
 
   // Error handler (must be last)
   app.use(errorHandler);
