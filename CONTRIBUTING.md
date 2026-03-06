@@ -37,23 +37,49 @@ The API runs at http://localhost:4000 and the web UI at http://localhost:3000.
 
 ## Project Structure
 
-```
-packages/
-├── core/src/          # Shared types (imported by both api and web)
-│   ├── types/         # TypeScript interfaces
-│   └── schemas/       # Zod validation schemas
-├── api/src/
-│   ├── routes/        # Express route handlers (thin HTTP layer)
-│   ├── services/      # Business logic (where the real work happens)
-│   ├── middleware/     # Express middleware
-│   ├── lib/           # Utilities (OpenAI client, Redis, etc.)
-│   └── workers/       # BullMQ background job processors
-└── web/src/
-    ├── components/    # React components
-    │   └── ui/        # Base UI primitives
-    ├── pages/         # Route-level page components
-    ├── hooks/         # Custom React hooks
-    └── lib/           # Utility functions and API client
+```mermaid
+graph TD
+    PKG[packages/] --> CORE[core/src/]
+    PKG --> API[api/src/]
+    PKG --> WEB[web/src/]
+
+    CORE --> TYPES[types/]
+    CORE --> SCHEMAS[schemas/]
+    TYPES -.- TYPES_D[TypeScript interfaces]
+    SCHEMAS -.- SCHEMAS_D[Zod validation schemas]
+
+    API --> ROUTES[routes/]
+    API --> SERVICES[services/]
+    API --> MW[middleware/]
+    API --> LIB_A[lib/]
+    API --> WORKERS[workers/]
+    ROUTES -.- ROUTES_D[Express route handlers]
+    SERVICES -.- SERVICES_D[Business logic]
+    MW -.- MW_D[Express middleware]
+    LIB_A -.- LIB_A_D[Utilities — OpenAI, Redis, etc.]
+    WORKERS -.- WORKERS_D[BullMQ background job processors]
+
+    WEB --> COMP[components/]
+    WEB --> PAGES[pages/]
+    WEB --> HOOKS[hooks/]
+    WEB --> LIB_W[lib/]
+    COMP --> UI[ui/]
+    UI -.- UI_D[Base UI primitives]
+    PAGES -.- PAGES_D[Route-level page components]
+    HOOKS -.- HOOKS_D[Custom React hooks]
+    LIB_W -.- LIB_W_D[Utility functions and API client]
+
+    style TYPES_D fill:none,stroke:none
+    style SCHEMAS_D fill:none,stroke:none
+    style ROUTES_D fill:none,stroke:none
+    style SERVICES_D fill:none,stroke:none
+    style MW_D fill:none,stroke:none
+    style LIB_A_D fill:none,stroke:none
+    style WORKERS_D fill:none,stroke:none
+    style UI_D fill:none,stroke:none
+    style PAGES_D fill:none,stroke:none
+    style HOOKS_D fill:none,stroke:none
+    style LIB_W_D fill:none,stroke:none
 ```
 
 ## Coding Standards

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ProposalCard } from '@/components/proposals/ProposalCard';
 import { ProposalDetail } from '@/components/proposals/ProposalDetail';
 import { useProposalsList, useGenerateProposals } from '@/hooks/useProposals';
+import { DemoTooltip } from '@/components/ui/DemoTooltip';
 import type { ProposalsQueryParams } from '@/lib/api';
 
 const STATUS_OPTIONS = [
@@ -69,14 +70,16 @@ export default function ProposalsPage() {
       <Topbar
         title="Proposals"
         actions={
-          <Button
-            onClick={() => generateMutation.mutate(undefined)}
-            loading={generateMutation.isPending}
-            size="sm"
-          >
-            <Sparkles size={14} />
-            Generate Proposals
-          </Button>
+          <DemoTooltip>
+            <Button
+              onClick={() => generateMutation.mutate(undefined)}
+              loading={generateMutation.isPending}
+              size="sm"
+            >
+              <Sparkles size={14} />
+              Generate Proposals
+            </Button>
+          </DemoTooltip>
         }
       />
       <div className="flex flex-1 overflow-hidden">

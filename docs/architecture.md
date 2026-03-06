@@ -4,12 +4,19 @@
 
 ShipScope is a monorepo with three packages:
 
-```
-shipscope/
-├── packages/
-│   ├── core/     # Shared TypeScript types and Zod schemas
-│   ├── api/      # Express REST API + BullMQ workers
-│   └── web/      # React SPA (Vite + Tailwind)
+```mermaid
+graph TD
+    ROOT[shipscope/] --> PKG[packages/]
+    PKG --> CORE[core/]
+    PKG --> API[api/]
+    PKG --> WEB[web/]
+    CORE -.- CORE_DESC[Shared TypeScript types and Zod schemas]
+    API -.- API_DESC[Express REST API + BullMQ workers]
+    WEB -.- WEB_DESC[React SPA — Vite + Tailwind]
+
+    style CORE_DESC fill:none,stroke:none
+    style API_DESC fill:none,stroke:none
+    style WEB_DESC fill:none,stroke:none
 ```
 
 ## Architecture Diagram
@@ -49,32 +56,53 @@ graph TB
 
 ### 1. Feedback Ingestion
 
-```
-User Upload/Webhook → Express Route → Zod Validation → Sanitization
-  → Feedback Service → Prisma INSERT → PostgreSQL
-  → Enqueue embedding job → Redis/BullMQ
+```mermaid
+graph LR
+    A[User Upload / Webhook] --> B[Express Route]
+    B --> C[Zod Validation]
+    C --> D[Sanitization]
+    D --> E[Feedback Service]
+    E --> F[Prisma INSERT]
+    F --> G[(PostgreSQL)]
+    E --> H[Enqueue embedding job]
+    H --> I[(Redis / BullMQ)]
 ```
 
 ### 2. AI Synthesis Pipeline
 
-```
-Synthesis Trigger → BullMQ Job Queue → Worker picks up job
-  → Step 1: Generate embeddings (OpenAI text-embedding-3-small)
-  → Step 2: Store embeddings in pgvector
-  → Step 3: Cluster similar feedback (cosine similarity)
-  → Step 4: Extract themes (OpenAI gpt-4o-mini)
-  → Step 5: Generate proposals with RICE scores (OpenAI gpt-4o-mini)
-  → Step 6: Store results in PostgreSQL
+```mermaid
+graph TD
+    A[Synthesis Trigger] --> B[BullMQ Job Queue]
+    B --> C[Worker picks up job]
+    C --> D["Step 1: Generate embeddings
+    (OpenAI text-embedding-3-small)"]
+    D --> E["Step 2: Store embeddings
+    in pgvector"]
+    E --> F["Step 3: Cluster similar feedback
+    (cosine similarity)"]
+    F --> G["Step 4: Extract themes
+    (OpenAI gpt-4o-mini)"]
+    G --> H["Step 5: Generate proposals
+    with RICE scores (OpenAI gpt-4o-mini)"]
+    H --> I["Step 6: Store results
+    in PostgreSQL"]
 ```
 
 ### 3. Dashboard Data Flow
 
-```
-React Component mounts → TanStack Query fetches /api/dashboard/stats
-  → Express Route → Dashboard Service → Check Redis cache
-    → Cache HIT: return cached data (< 5ms)
-    → Cache MISS: query PostgreSQL → cache result (60s TTL) → return
-  → React Query caches in browser → Re-render with data
+```mermaid
+graph TD
+    A[React Component mounts] --> B["TanStack Query fetches
+    /api/dashboard/stats"]
+    B --> C[Express Route]
+    C --> D[Dashboard Service]
+    D --> E{Check Redis cache}
+    E -->|Cache HIT| F["Return cached data (< 5ms)"]
+    E -->|Cache MISS| G[Query PostgreSQL]
+    G --> H["Cache result (60s TTL)"]
+    H --> F
+    F --> I[React Query caches in browser]
+    I --> J[Re-render with data]
 ```
 
 ## Component Responsibilities
@@ -91,10 +119,18 @@ React Component mounts → TanStack Query fetches /api/dashboard/stats
 
 ## Database Schema (simplified)
 
-```
-FeedbackItem ──< FeedbackThemeLink >── Theme ──< Proposal ── Spec
-    │                                     │
-    └── embedding (pgvector)              └── feedbackCount (denormalized)
+```mermaid
+erDiagram
+    FeedbackItem ||--o{ FeedbackThemeLink : "has"
+    FeedbackThemeLink }o--|| Theme : "belongs to"
+    Theme ||--o{ Proposal : "has"
+    Proposal ||--o| Spec : "generates"
+    FeedbackItem {
+        vector embedding "pgvector"
+    }
+    Theme {
+        int feedbackCount "denormalized"
+    }
 ```
 
 Key tables: FeedbackItem, Theme, Proposal, Spec, ApiKey, Setting, ActivityLog

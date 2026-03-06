@@ -1,6 +1,7 @@
 import { Brain, Play, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DemoTooltip } from '@/components/ui/DemoTooltip';
 import { useSynthesisStatus, useRunSynthesis } from '@/hooks/useSynthesis';
 
 export function SynthesisStatus() {
@@ -51,16 +52,18 @@ export function SynthesisStatus() {
           )}
         </div>
       </div>
-      <Button
-        variant={isActive ? 'secondary' : 'primary'}
-        size="sm"
-        onClick={() => runMutation.mutate()}
-        loading={runMutation.isPending}
-        disabled={isActive}
-      >
-        <Play size={14} />
-        {isActive ? 'Running...' : 'Run Synthesis'}
-      </Button>
+      <DemoTooltip>
+        <Button
+          variant={isActive ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={() => runMutation.mutate()}
+          loading={runMutation.isPending}
+          disabled={isActive}
+        >
+          <Play size={14} />
+          {isActive ? 'Running...' : 'Run Synthesis'}
+        </Button>
+      </DemoTooltip>
     </Card>
   );
 }

@@ -8,6 +8,7 @@ const url = new URL(REDIS_URL);
 const connection = {
   host: url.hostname,
   port: parseInt(url.port || '6379'),
+  password: url.password || undefined,
   db: url.pathname ? parseInt(url.pathname.slice(1)) || 0 : 0,
 };
 

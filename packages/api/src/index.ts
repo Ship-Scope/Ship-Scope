@@ -7,6 +7,7 @@ import { compressionMiddleware } from './middleware/compression';
 import { sanitizeMiddleware } from './middleware/sanitize';
 import { httpsRedirect } from './middleware/https-redirect';
 import { errorHandler } from './middleware/errorHandler';
+import { demoGuard } from './middleware/demoGuard';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import { logger } from './lib/logger';
@@ -41,14 +42,12 @@ export function createApp() {
           connectSrc: ["'self'", process.env.CORS_ORIGIN || 'http://localhost:3000'],
           frameSrc: ["'none'"],
           objectSrc: ["'none'"],
+          upgradeInsecureRequests: null,
         },
       },
       frameguard: { action: 'deny' },
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-      hsts:
-        process.env.NODE_ENV === 'production'
-          ? { maxAge: 31536000, includeSubDomains: true, preload: true }
-          : false,
+      hsts: false, // Enable only behind a real HTTPS termination proxy
     }),
   );
   app.use(createCorsMiddleware());
@@ -57,12 +56,12 @@ export function createApp() {
 
   // Routes
   app.use('/api/health', healthRoutes);
-  app.use('/api/feedback', feedbackRoutes);
-  app.use('/api/synthesis', synthesisRoutes);
-  app.use('/api/proposals', proposalRoutes);
-  app.use('/api/specs', specRoutes);
-  app.use('/api/feedback/webhook', webhookRoutes);
-  app.use('/api/settings', settingsRoutes);
+  app.use('/api/feedback', demoGuard, feedbackRoutes);
+  app.use('/api/synthesis', demoGuard, synthesisRoutes);
+  app.use('/api/proposals', demoGuard, proposalRoutes);
+  app.use('/api/specs', demoGuard, specRoutes);
+  app.use('/api/feedback/webhook', demoGuard, webhookRoutes);
+  app.use('/api/settings', demoGuard, settingsRoutes);
   app.use('/api/dashboard', dashboardRoutes);
 
   // Error handler (must be last)
@@ -73,6 +72,10 @@ export function createApp() {
 
 // Only listen when run directly
 if (process.env.NODE_ENV !== 'test') {
+  // Start BullMQ workers
+  import('./workers/synthesis.worker').then(() => logger.info('Synthesis worker started'));
+  import('./workers/import.worker').then(() => logger.info('Import worker started'));
+
   const PORT = process.env.PORT || 4000;
   const app = createApp();
   app.listen(PORT, () => {

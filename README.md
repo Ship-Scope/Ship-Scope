@@ -25,8 +25,11 @@ Cursor and Claude Code made writing code 10x faster. But the bottleneck shifted 
 
 ShipScope ingests all your customer feedback, uses AI to find patterns, and tells you exactly what to build next — backed by evidence. Then it generates agent-ready specs you can feed directly to Cursor or Claude Code.
 
-```
-Customer Feedback → AI Synthesis → Feature Proposals → Agent-Ready Specs
+```mermaid
+graph LR
+    A[Customer Feedback] --> B[AI Synthesis]
+    B --> C[Feature Proposals]
+    C --> D[Agent-Ready Specs]
 ```
 
 ## Features
@@ -73,11 +76,18 @@ API runs at http://localhost:4000, Web at http://localhost:3000.
 
 ## Architecture
 
-```
-packages/
-├── core/    → Shared TypeScript types and schemas
-├── api/     → Express + Prisma + BullMQ backend
-└── web/     → React 18 + Vite + Tailwind frontend
+```mermaid
+graph TD
+    ROOT[packages/] --> CORE[core/]
+    ROOT --> API[api/]
+    ROOT --> WEB[web/]
+    CORE -.- CORE_DESC[Shared TypeScript types and schemas]
+    API -.- API_DESC[Express + Prisma + BullMQ backend]
+    WEB -.- WEB_DESC[React 18 + Vite + Tailwind frontend]
+
+    style CORE_DESC fill:none,stroke:none
+    style API_DESC fill:none,stroke:none
+    style WEB_DESC fill:none,stroke:none
 ```
 
 See [docs/architecture.md](docs/architecture.md) for the full system design.

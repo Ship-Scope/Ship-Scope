@@ -15,6 +15,7 @@ import {
   useBulkDeleteFeedback,
   useMarkProcessed,
 } from '@/hooks/useFeedback';
+import { DemoTooltip } from '@/components/ui/DemoTooltip';
 import type { FeedbackQueryParams } from '@/lib/api';
 
 function parseSentimentFilter(value: string): { min?: number; max?: number } {
@@ -168,9 +169,11 @@ export default function FeedbackPage() {
         title="Feedback"
         actions={
           <div className="flex items-center gap-3">
-            <Button variant="secondary" onClick={() => setImportOpen(true)}>
-              <Upload size={16} /> Import
-            </Button>
+            <DemoTooltip>
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <Upload size={16} /> Import
+              </Button>
+            </DemoTooltip>
           </div>
         }
       />
