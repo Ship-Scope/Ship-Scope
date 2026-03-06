@@ -7,6 +7,7 @@ import { compressionMiddleware } from './middleware/compression';
 import { sanitizeMiddleware } from './middleware/sanitize';
 import { httpsRedirect } from './middleware/https-redirect';
 import { errorHandler } from './middleware/errorHandler';
+import { demoGuard } from './middleware/demoGuard';
 import { prisma } from './lib/prisma';
 import { redis } from './lib/redis';
 import { logger } from './lib/logger';
@@ -55,12 +56,12 @@ export function createApp() {
 
   // Routes
   app.use('/api/health', healthRoutes);
-  app.use('/api/feedback', feedbackRoutes);
-  app.use('/api/synthesis', synthesisRoutes);
-  app.use('/api/proposals', proposalRoutes);
-  app.use('/api/specs', specRoutes);
-  app.use('/api/feedback/webhook', webhookRoutes);
-  app.use('/api/settings', settingsRoutes);
+  app.use('/api/feedback', demoGuard, feedbackRoutes);
+  app.use('/api/synthesis', demoGuard, synthesisRoutes);
+  app.use('/api/proposals', demoGuard, proposalRoutes);
+  app.use('/api/specs', demoGuard, specRoutes);
+  app.use('/api/feedback/webhook', demoGuard, webhookRoutes);
+  app.use('/api/settings', demoGuard, settingsRoutes);
   app.use('/api/dashboard', dashboardRoutes);
 
   // Error handler (must be last)

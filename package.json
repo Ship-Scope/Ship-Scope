@@ -33,6 +33,7 @@
     "docker:prod:build": "docker compose -f docker-compose.prod.yml build --no-cache",
     "db:migrate": "npm run db:migrate --workspace=packages/api",
     "db:seed": "npm run db:seed --workspace=packages/api",
+    "db:seed-demo": "npm run db:seed-demo --workspace=packages/api",
     "db:studio": "cd packages/api && npx prisma studio",
     "db:reset": "bash scripts/reset-db.sh",
     "setup": "bash scripts/setup.sh",

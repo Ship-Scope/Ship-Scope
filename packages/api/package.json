@@ -8,6 +8,7 @@
     "start": "node dist/api/src/index.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx prisma db seed",
+    "db:seed-demo": "npx tsx prisma/seed-demo.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
