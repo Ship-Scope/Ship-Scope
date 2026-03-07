@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { specsApi } from '@/lib/api';
+import { useToast } from '@/context/ToastContext';
 
 export function useSpecsList() {
   return useQuery({
@@ -35,11 +36,16 @@ export function useAgentPrompt(specId: string | null, format: 'cursor' | 'claude
 
 export function useGenerateSpec() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   return useMutation({
     mutationFn: (proposalId: string) => specsApi.generate(proposalId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['specs'] });
       qc.invalidateQueries({ queryKey: ['proposals'] });
+      toast.success('Spec generated', 'PRD and agent prompt are ready.');
+    },
+    onError: () => {
+      toast.error('Spec generation failed', 'Could not generate the spec.');
     },
   });
 }

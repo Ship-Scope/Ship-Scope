@@ -58,10 +58,20 @@ export default {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
+        slideInRight: {
+          '0%': { opacity: '0', transform: 'translateX(100%)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+        slideOutRight: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'fade-up': 'fadeUp 0.3s ease-out',
         shimmer: 'shimmer 1.5s ease-in-out infinite',
+        'slide-in-right': 'slideInRight 0.2s ease-out',
+        'slide-out-right': 'slideOutRight 0.15s ease-in',
       },
     },
   },

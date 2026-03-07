@@ -1,4 +1,5 @@
-import { MessageSquare, Brain, Lightbulb, FileText } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { MessageSquare, Brain, Lightbulb, FileText, X } from 'lucide-react';
 import { Topbar } from '@/components/layout/Topbar';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -16,8 +17,18 @@ import {
   useSentimentDistribution,
 } from '@/hooks/useDashboard';
 
+const ONBOARDING_DISMISSED_KEY = 'shipscope-onboarding-dismissed';
+
 export default function DashboardPage() {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const [onboardingDismissed, setOnboardingDismissed] = useState(
+    () => localStorage.getItem(ONBOARDING_DISMISSED_KEY) === 'true',
+  );
+
+  const dismissOnboarding = useCallback(() => {
+    setOnboardingDismissed(true);
+    localStorage.setItem(ONBOARDING_DISMISSED_KEY, 'true');
+  }, []);
   const { data: activity, isLoading: activityLoading } = useActivityFeed();
   const { data: topThemes, isLoading: themesLoading } = useTopThemes();
   const { data: sentiment, isLoading: sentimentLoading } = useSentimentDistribution();
@@ -119,8 +130,15 @@ export default function DashboardPage() {
             </div>
 
             {/* Onboarding banner when some steps incomplete */}
-            {!allStepsComplete && stats && (
-              <div className="bg-bg-surface border border-border rounded-xl p-5">
+            {!allStepsComplete && stats && !onboardingDismissed && (
+              <div className="bg-bg-surface border border-border rounded-xl p-5 relative">
+                <button
+                  onClick={dismissOnboarding}
+                  className="absolute top-4 right-4 text-text-muted hover:text-text-primary p-1 rounded-md hover:bg-bg-surface-2 transition-colors"
+                  aria-label="Dismiss onboarding"
+                >
+                  <X size={16} />
+                </button>
                 <OnboardingSteps
                   feedbackCount={stats.feedback.total}
                   themeCount={stats.themes.total}
