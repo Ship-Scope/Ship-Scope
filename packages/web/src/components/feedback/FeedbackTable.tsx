@@ -1,7 +1,5 @@
-import { useState, useCallback } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { FeedbackRow } from './FeedbackRow';
-import { FeedbackDetail } from './FeedbackDetail';
 import { type FeedbackItem } from '@/lib/api';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
@@ -10,9 +8,10 @@ interface FeedbackTableProps {
   items: FeedbackItem[];
   isLoading: boolean;
   selectedIds: Set<string>;
+  expandedId: string | null;
   onSelectId: (id: string) => void;
   onSelectAll: () => void;
-  onDelete: (id: string) => void;
+  onToggleExpand: (id: string) => void;
   sortBy: string;
   sortOrder: string;
   onSort: (column: string) => void;
@@ -39,19 +38,14 @@ export function FeedbackTable({
   items,
   isLoading,
   selectedIds,
+  expandedId,
   onSelectId,
   onSelectAll,
-  onDelete,
+  onToggleExpand,
   sortBy,
   sortOrder,
   onSort,
 }: FeedbackTableProps) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedId((prev) => (prev === id ? null : id));
-  }, []);
-
   const allSelected = items.length > 0 && items.every((item) => selectedIds.has(item.id));
 
   const thClass =
@@ -102,19 +96,9 @@ export function FeedbackTable({
               selected={selectedIds.has(item.id)}
               expanded={expandedId === item.id}
               onSelect={onSelectId}
-              onToggle={toggleExpand}
+              onToggle={onToggleExpand}
             />
           ))}
-          {items.map(
-            (item) =>
-              expandedId === item.id && (
-                <tr key={`${item.id}-detail`}>
-                  <td colSpan={6}>
-                    <FeedbackDetail item={item} onDelete={onDelete} />
-                  </td>
-                </tr>
-              ),
-          )}
         </tbody>
       </table>
     </div>
