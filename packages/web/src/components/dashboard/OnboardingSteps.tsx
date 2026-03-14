@@ -34,7 +34,7 @@ export function OnboardingSteps({
     {
       id: 1,
       title: 'Import Feedback',
-      description: 'Upload a CSV or JSON file, or add feedback manually.',
+      description: 'Upload a CSV or JSON file, import from Jira, or add feedback manually.',
       icon: <Upload size={18} />,
       status: getStatus(feedbackCount, true),
       completedText: step1Complete

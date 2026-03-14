@@ -22,31 +22,39 @@ const router = Router();
 router.post(
   '/generate',
   validate(generateProposalsSchema, 'body'),
-  async (req: Request, res: Response) => {
-    const { topN } = req.body;
-    const result = await generateFromThemes(topN);
+  async (req: Request, res: Response, next) => {
+    try {
+      const { topN } = req.body;
+      const result = await generateFromThemes(topN);
 
-    // Link evidence for newly created proposals
-    const proposals = await listProposals({ status: 'proposed', pageSize: 100 });
-    for (const proposal of proposals.data) {
-      try {
-        await linkEvidence(proposal.id);
-      } catch {
-        // Non-fatal: evidence linking failure shouldn't fail the response
+      // Link evidence for newly created proposals
+      const proposals = await listProposals({ status: 'proposed', pageSize: 100 });
+      for (const proposal of proposals.data) {
+        try {
+          await linkEvidence(proposal.id);
+        } catch {
+          // Non-fatal: evidence linking failure shouldn't fail the response
+        }
       }
+
+      await activityService.log({
+        type: 'proposal_generation',
+        description: `Generated ${result.proposalsCreated} proposals (${result.proposalsSkipped} skipped)`,
+        metadata: {
+          created: result.proposalsCreated,
+          skipped: result.proposalsSkipped,
+          errors: result.errors.length,
+        },
+      });
+
+      res.status(201).json({ data: result });
+    } catch (err) {
+      if (err instanceof AppError) {
+        res.status(err.statusCode).json({ error: err.message, code: err.code });
+        return;
+      }
+      next(err);
     }
-
-    await activityService.log({
-      type: 'proposal_generation',
-      description: `Generated ${result.proposalsCreated} proposals (${result.proposalsSkipped} skipped)`,
-      metadata: {
-        created: result.proposalsCreated,
-        skipped: result.proposalsSkipped,
-        errors: result.errors.length,
-      },
-    });
-
-    res.status(201).json({ data: result });
   },
 );
 

@@ -78,6 +78,10 @@ model Theme {
   avgUrgency       Float  @default(0)
   opportunityScore Float  @default(0)
 
+  // Jira Integration
+  jiraEpicKey  String?  // e.g. "PROJ-100" — linked Jira Epic
+  jiraEpicUrl  String?  // Full URL to the Jira Epic
+
   // Relations
   feedbackItems FeedbackThemeLink[]
   proposals     Proposal[]
@@ -125,6 +129,7 @@ model Proposal {
   theme       Theme?  @relation(fields: [themeId], references: [id])
   evidence    ProposalEvidence[]
   specs       Spec[]
+  jiraIssue   JiraIssue?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -204,4 +209,33 @@ model Setting {
   updatedAt DateTime @updatedAt
 
   @@map("settings")
+}
+
+// ============================================
+// JIRA INTEGRATION
+// ============================================
+
+model JiraIssue {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+
+  // Jira issue data
+  jiraKey     String   // e.g. "PROJ-123"
+  jiraId      String   // Jira internal ID
+  jiraUrl     String   // Full URL to the issue
+  issueType   String   @default("Story") // Story, Task, Bug, Epic
+  status      String   @default("To Do") // Jira workflow status
+  summary     String
+  epicKey     String?  // Parent epic key if created via theme export
+  syncedAt    DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([proposalId])
+  @@unique([jiraKey])
+  @@index([proposalId])
+  @@index([epicKey])
+  @@map("jira_issues")
 }

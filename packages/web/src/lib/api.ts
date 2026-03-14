@@ -168,6 +168,8 @@ export interface ThemeItem {
   avgSentiment: number;
   avgUrgency: number;
   opportunityScore: number;
+  jiraEpicKey: string | null;
+  jiraEpicUrl: string | null;
   createdAt: string;
   updatedAt: string;
   feedbackItems: {
@@ -439,4 +441,137 @@ export const settingsApi = {
       .then((r) => r.data),
 
   revokeApiKey: (id: string) => api.delete(`/settings/api-keys/${id}`),
+};
+
+// ============================================
+// Jira Integration API
+// ============================================
+
+export interface JiraTestResult {
+  success: boolean;
+  message: string;
+  serverTitle?: string;
+}
+
+export interface JiraProject {
+  id: string;
+  key: string;
+  name: string;
+}
+
+export interface JiraIssueType {
+  id: string;
+  name: string;
+  subtask: boolean;
+}
+
+export interface JiraExportResult {
+  id: string;
+  jiraKey: string;
+  jiraUrl: string;
+}
+
+export interface JiraThemeExportResult {
+  epicKey: string;
+  epicUrl: string;
+  storiesCreated: number;
+  storiesSkipped: number;
+}
+
+export interface JiraImportResult {
+  imported: number;
+  skipped: number;
+  sourceId: string;
+}
+
+export interface JiraSyncAllResult {
+  synced: number;
+  autoShipped: number;
+  errors: number;
+}
+
+export interface JiraDashboardSummary {
+  totalExported: number;
+  byStatus: Record<string, number>;
+  recentExports: {
+    jiraKey: string;
+    summary: string;
+    status: string;
+    jiraUrl: string;
+    createdAt: string;
+  }[];
+  epicCount: number;
+}
+
+export interface JiraIssueItem {
+  id: string;
+  proposalId: string;
+  jiraKey: string;
+  jiraId: string;
+  jiraUrl: string;
+  issueType: string;
+  status: string;
+  summary: string;
+  syncedAt: string;
+  createdAt: string;
+  proposal: {
+    id: string;
+    title: string;
+    status: string;
+    riceScore: number | null;
+  };
+}
+
+export const jiraApi = {
+  // Configuration
+  saveConfig: (config: Record<string, string>) =>
+    api.put<{ data: { saved: boolean } }>('/jira/config', config).then((r) => r.data.data),
+
+  testConnection: () => api.post<{ data: JiraTestResult }>('/jira/test').then((r) => r.data.data),
+
+  listProjects: () => api.get<{ data: JiraProject[] }>('/jira/projects').then((r) => r.data.data),
+
+  listIssueTypes: () =>
+    api.get<{ data: JiraIssueType[] }>('/jira/issue-types').then((r) => r.data.data),
+
+  // Export & Sync
+  exportProposal: (proposalId: string) =>
+    api.post<{ data: JiraExportResult }>(`/jira/export/${proposalId}`).then((r) => r.data.data),
+
+  syncStatus: (proposalId: string) =>
+    api
+      .post<{ data: { jiraKey: string; status: string } }>(`/jira/sync/${proposalId}`)
+      .then((r) => r.data.data),
+
+  listIssues: () => api.get<{ data: JiraIssueItem[] }>('/jira/issues').then((r) => r.data.data),
+
+  getByProposal: (proposalId: string) =>
+    api.get<{ data: JiraIssueItem | null }>(`/jira/issues/${proposalId}`).then((r) => r.data.data),
+
+  unlink: (proposalId: string) => api.delete(`/jira/issues/${proposalId}`),
+
+  // Theme → Epic bulk export
+  exportTheme: (themeId: string) =>
+    api
+      .post<{ data: JiraThemeExportResult }>(`/jira/export-theme/${themeId}`)
+      .then((r) => r.data.data),
+
+  // Spec attachment
+  attachSpec: (proposalId: string) =>
+    api
+      .post<{ data: { jiraKey: string; commented: boolean } }>(`/jira/attach-spec/${proposalId}`)
+      .then((r) => r.data.data),
+
+  // Import from Jira
+  importFeedback: (options?: { jql?: string; maxResults?: number }) =>
+    api
+      .post<{ data: JiraImportResult }>('/jira/import-feedback', options || {})
+      .then((r) => r.data.data),
+
+  // Bulk sync
+  syncAll: () => api.post<{ data: JiraSyncAllResult }>('/jira/sync-all').then((r) => r.data.data),
+
+  // Dashboard
+  dashboardSummary: () =>
+    api.get<{ data: JiraDashboardSummary }>('/jira/dashboard').then((r) => r.data.data),
 };

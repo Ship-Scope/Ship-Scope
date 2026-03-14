@@ -1,7 +1,12 @@
-import { type Prisma } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 
-export type ActivityType = 'import' | 'synthesis' | 'proposal_generation' | 'spec_generation';
+export type ActivityType =
+  | 'import'
+  | 'synthesis'
+  | 'proposal_generation'
+  | 'spec_generation'
+  | 'jira_export';
 
 interface LogActivityInput {
   type: ActivityType;

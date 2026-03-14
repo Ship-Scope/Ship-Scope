@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bot, Sliders, Database, Webhook, Info } from 'lucide-react';
+import { Bot, Sliders, Database, Webhook, Info, Blocks } from 'lucide-react';
 import { Topbar } from '@/components/layout/Topbar';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -7,14 +7,16 @@ import { AIConfigSection } from '@/components/settings/AIConfigSection';
 import { SynthesisSettingsSection } from '@/components/settings/SynthesisSettingsSection';
 import { DataManagementSection } from '@/components/settings/DataManagementSection';
 import { WebhookSection } from '@/components/settings/WebhookSection';
+import { JiraConfigSection } from '@/components/settings/JiraConfigSection';
 import { AboutSection } from '@/components/settings/AboutSection';
 import { useSettings, useUpdateSettings } from '@/hooks/useSettings';
 
-type Section = 'ai' | 'synthesis' | 'data' | 'webhook' | 'about';
+type Section = 'ai' | 'synthesis' | 'jira' | 'data' | 'webhook' | 'about';
 
 const SECTIONS: { id: Section; label: string; icon: React.ReactNode }[] = [
   { id: 'ai', label: 'AI Configuration', icon: <Bot size={16} /> },
   { id: 'synthesis', label: 'Synthesis Settings', icon: <Sliders size={16} /> },
+  { id: 'jira', label: 'Jira Integration', icon: <Blocks size={16} /> },
   { id: 'data', label: 'Data Management', icon: <Database size={16} /> },
   { id: 'webhook', label: 'Webhooks & API Keys', icon: <Webhook size={16} /> },
   { id: 'about', label: 'About', icon: <Info size={16} /> },
@@ -63,6 +65,7 @@ export default function SettingsPage() {
               <p className="text-xs text-text-muted mb-6">
                 {activeSection === 'ai' && 'Configure your OpenAI API key and model preferences.'}
                 {activeSection === 'synthesis' && 'Tune the feedback clustering parameters.'}
+                {activeSection === 'jira' && 'Connect to Jira to export proposals as issues.'}
                 {activeSection === 'data' && 'Export or delete all application data.'}
                 {activeSection === 'webhook' && 'Manage webhook URL and API key authentication.'}
                 {activeSection === 'about' && 'Application version and links.'}
@@ -81,6 +84,9 @@ export default function SettingsPage() {
                   )}
                   {activeSection === 'synthesis' && (
                     <SynthesisSettingsSection settings={settings ?? {}} onUpdate={handleUpdate} />
+                  )}
+                  {activeSection === 'jira' && (
+                    <JiraConfigSection settings={settings ?? {}} onUpdate={handleUpdate} />
                   )}
                   {activeSection === 'data' && <DataManagementSection />}
                   {activeSection === 'webhook' && <WebhookSection />}

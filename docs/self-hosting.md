@@ -87,6 +87,33 @@ docker compose -f docker-compose.prod.yml exec api \
 | `WEB_PORT`            | No       | `3000`                  | Host port for the web UI                  |
 | `LOG_LEVEL`           | No       | `info`                  | Log level: debug, info, warn, error       |
 
+## Jira Integration (Optional)
+
+Jira is configured through the Settings UI after deployment — no environment variables needed.
+
+### Setup
+
+1. Go to **Settings → Jira Integration** in the ShipScope UI
+2. Enter your Jira Cloud host URL (e.g. `https://yourcompany.atlassian.net`)
+3. Enter your Jira account email and [API token](https://id.atlassian.com/manage-profile/security/api-tokens)
+4. Click **Test Connection** to verify credentials
+5. Select your default project and issue type from the dropdowns
+6. Click **Save**
+
+### Real-Time Sync via Webhooks
+
+To receive instant status updates when Jira issues change:
+
+1. In Jira, go to **Settings → System → Webhooks**
+2. Create a new webhook pointing to:
+   ```
+   https://your-domain.com/api/jira/webhook
+   ```
+3. Select the **Issue updated** event
+4. Save the webhook
+
+When a Jira issue reaches Done/Closed/Resolved, ShipScope will automatically mark the linked proposal as "shipped".
+
 ## Updating
 
 ```bash

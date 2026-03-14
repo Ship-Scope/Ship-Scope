@@ -9,6 +9,7 @@ import { SentimentGauge } from '@/components/dashboard/SentimentGauge';
 import { QuickActions } from '@/components/dashboard/QuickActions';
 import { DashboardEmptyState } from '@/components/dashboard/DashboardEmptyState';
 import { OnboardingSteps } from '@/components/dashboard/OnboardingSteps';
+import { JiraSyncWidget } from '@/components/dashboard/JiraSyncWidget';
 import {
   useDashboardStats,
   useActivityFeed,
@@ -116,6 +117,14 @@ export default function DashboardPage() {
                 </h3>
                 <QuickActions />
               </div>
+            </div>
+
+            {/* Jira Integration Widget */}
+            <div className="bg-bg-surface border border-border rounded-xl p-5">
+              <h3 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
+                Jira Integration
+              </h3>
+              <JiraSyncWidget />
             </div>
 
             {/* Onboarding banner when some steps incomplete */}

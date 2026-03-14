@@ -31,6 +31,11 @@ export const settingsService = {
       const key = result[SETTING_KEYS.OPENAI_API_KEY];
       result[SETTING_KEYS.OPENAI_API_KEY] = key.slice(0, 7) + '...' + key.slice(-4);
     }
+    // Mask the Jira API token
+    if (result['jira_api_token']) {
+      const token = result['jira_api_token'];
+      result['jira_api_token'] = token.slice(0, 4) + '...' + token.slice(-4);
+    }
     return result;
   },
 
