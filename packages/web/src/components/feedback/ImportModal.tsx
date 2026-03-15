@@ -1,20 +1,24 @@
 import { useState, useCallback } from 'react';
-import { X } from 'lucide-react';
+import { X, Download, CheckCircle2 } from 'lucide-react';
 import { FileDropzone } from './FileDropzone';
 import { ColumnMapper } from './ColumnMapper';
 import { ImportProgress } from './ImportProgress';
 import { Button } from '@/components/ui/Button';
 import { useImportPreview, useImportCSV, useImportJSON } from '@/hooks/useImport';
+import { useJiraImportFeedback } from '@/hooks/useJira';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+type ImportSource = 'file' | 'jira';
 type Step = 'upload' | 'preview' | 'progress';
 
 export function ImportModal({ isOpen, onClose }: ImportModalProps) {
+  const [importSource, setImportSource] = useState<ImportSource>('file');
   const [step, setStep] = useState<Step>('upload');
+  const [jql, setJql] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [preview, setPreview] = useState<Record<string, string>[]>([]);
@@ -32,6 +36,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
   const previewMutation = useImportPreview();
   const csvMutation = useImportCSV();
   const jsonMutation = useImportJSON();
+  const jiraImportMutation = useJiraImportFeedback();
 
   const handleFile = useCallback(
     async (f: File) => {
@@ -90,7 +95,16 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
     setMapping((prev) => ({ ...prev, [field]: column }));
   }, []);
 
+  const handleJiraImport = useCallback(async () => {
+    try {
+      await jiraImportMutation.mutateAsync(jql.trim() ? { jql: jql.trim() } : undefined);
+    } catch {
+      setError('Jira import failed. Check your Jira configuration in Settings.');
+    }
+  }, [jql, jiraImportMutation]);
+
   const handleClose = useCallback(() => {
+    setImportSource('file');
     setStep('upload');
     setFile(null);
     setHeaders([]);
@@ -100,6 +114,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
     setSuggestedMapping({});
     setJobId(null);
     setSyncResult(null);
+    setJql('');
     setError('');
     onClose();
   }, [onClose]);
@@ -108,11 +123,13 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
 
   const isComplete = syncResult || jobId;
   const stepTitle =
-    step === 'upload'
-      ? 'Import Feedback'
-      : step === 'preview'
-        ? 'Import Feedback — Map Columns'
-        : 'Import Feedback — Importing...';
+    importSource === 'jira'
+      ? 'Import from Jira'
+      : step === 'upload'
+        ? 'Import Feedback'
+        : step === 'preview'
+          ? 'Import Feedback — Map Columns'
+          : 'Import Feedback — Importing...';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -126,98 +143,171 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
           </button>
         </div>
 
+        {/* Source Toggle */}
+        <div className="flex border-b border-border">
+          <button
+            onClick={() => {
+              setImportSource('file');
+              setError('');
+            }}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              importSource === 'file'
+                ? 'text-accent-blue border-b-2 border-accent-blue'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            From File
+          </button>
+          <button
+            onClick={() => {
+              setImportSource('jira');
+              setError('');
+            }}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              importSource === 'jira'
+                ? 'text-accent-blue border-b-2 border-accent-blue'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            From Jira
+          </button>
+        </div>
+
         {/* Body */}
         <div className="px-6 py-6">
-          {step === 'upload' && <FileDropzone onFile={handleFile} file={file} error={error} />}
-
-          {step === 'preview' && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 text-sm text-text-secondary">
-                <span className="font-medium text-text-primary">{file?.name}</span>
-                <span>({totalRows} rows)</span>
+          {importSource === 'jira' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-text-secondary">
+                Import bugs and stories from your connected Jira project as feedback items for AI
+                analysis.
+              </p>
+              <div>
+                <label className="text-sm font-medium text-text-primary block mb-1.5">
+                  Custom JQL (optional)
+                </label>
+                <input
+                  type="text"
+                  value={jql}
+                  onChange={(e) => setJql(e.target.value)}
+                  placeholder="project = PROJ AND type in (Bug, Story) AND status != Done"
+                  className="w-full bg-bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted font-mono"
+                />
+                <p className="text-[10px] text-text-muted mt-1">
+                  Leave empty to use the default query for your configured project.
+                </p>
               </div>
+              <Button onClick={handleJiraImport} loading={jiraImportMutation.isPending}>
+                <Download size={14} />
+                Import from Jira
+              </Button>
+              {jiraImportMutation.data && (
+                <p className="text-sm text-success flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  Imported {jiraImportMutation.data.imported} items (
+                  {jiraImportMutation.data.skipped} duplicates skipped)
+                </p>
+              )}
+              {error && <p className="text-sm text-danger">{error}</p>}
+            </div>
+          ) : (
+            <>
+              {step === 'upload' && <FileDropzone onFile={handleFile} file={file} error={error} />}
 
-              <ColumnMapper
-                headers={headers}
-                mapping={mapping}
-                suggestedMapping={suggestedMapping}
-                onChange={handleMappingChange}
-              />
-
-              {/* Preview table */}
-              {preview.length > 0 && (
-                <div>
-                  <p className="text-xs text-text-muted font-medium uppercase tracking-wider mb-2">
-                    Preview (first {preview.length} rows)
-                  </p>
-                  <div className="overflow-x-auto border border-border rounded-lg">
-                    <table className="w-full text-xs">
-                      <thead>
-                        <tr className="bg-bg-surface-2 border-b border-border">
-                          {headers.slice(0, 5).map((h) => (
-                            <th key={h} className="px-3 py-2 text-left text-text-muted font-medium">
-                              {h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {preview.map((row, i) => (
-                          <tr key={i} className="border-b border-border">
-                            {headers.slice(0, 5).map((h) => (
-                              <td
-                                key={h}
-                                className="px-3 py-2 text-text-primary max-w-[200px] truncate"
-                              >
-                                {row[h] || <span className="text-text-muted">(empty)</span>}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+              {step === 'preview' && (
+                <div className="space-y-6">
+                  <div className="flex items-center gap-3 text-sm text-text-secondary">
+                    <span className="font-medium text-text-primary">{file?.name}</span>
+                    <span>({totalRows} rows)</span>
                   </div>
+
+                  <ColumnMapper
+                    headers={headers}
+                    mapping={mapping}
+                    suggestedMapping={suggestedMapping}
+                    onChange={handleMappingChange}
+                  />
+
+                  {/* Preview table */}
+                  {preview.length > 0 && (
+                    <div>
+                      <p className="text-xs text-text-muted font-medium uppercase tracking-wider mb-2">
+                        Preview (first {preview.length} rows)
+                      </p>
+                      <div className="overflow-x-auto border border-border rounded-lg">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-bg-surface-2 border-b border-border">
+                              {headers.slice(0, 5).map((h) => (
+                                <th
+                                  key={h}
+                                  className="px-3 py-2 text-left text-text-muted font-medium"
+                                >
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {preview.map((row, i) => (
+                              <tr key={i} className="border-b border-border">
+                                {headers.slice(0, 5).map((h) => (
+                                  <td
+                                    key={h}
+                                    className="px-3 py-2 text-text-primary max-w-[200px] truncate"
+                                  >
+                                    {row[h] || <span className="text-text-muted">(empty)</span>}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
+
+              {step === 'progress' && <ImportProgress jobId={jobId} syncResult={syncResult} />}
+            </>
           )}
-
-          {step === 'progress' && <ImportProgress jobId={jobId} syncResult={syncResult} />}
         </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border">
-          <div>
-            {step === 'preview' && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setStep('upload');
-                  setFile(null);
-                }}
-              >
-                Back
-              </Button>
-            )}
+        {/* Footer — only for file import */}
+        {importSource === 'file' && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+            <div>
+              {step === 'preview' && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setStep('upload');
+                    setFile(null);
+                  }}
+                >
+                  Back
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
+              {step !== 'progress' && (
+                <Button variant="secondary" onClick={handleClose}>
+                  Cancel
+                </Button>
+              )}
+              {step === 'preview' && (
+                <Button
+                  onClick={handleImport}
+                  disabled={!mapping.content}
+                  loading={csvMutation.isPending || jsonMutation.isPending}
+                >
+                  Import {totalRows} rows
+                </Button>
+              )}
+              {step === 'progress' && isComplete && <Button onClick={handleClose}>Done</Button>}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            {step !== 'progress' && (
-              <Button variant="secondary" onClick={handleClose}>
-                Cancel
-              </Button>
-            )}
-            {step === 'preview' && (
-              <Button
-                onClick={handleImport}
-                disabled={!mapping.content}
-                loading={csvMutation.isPending || jsonMutation.isPending}
-              >
-                Import {totalRows} rows
-              </Button>
-            )}
-            {step === 'progress' && isComplete && <Button onClick={handleClose}>Done</Button>}
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

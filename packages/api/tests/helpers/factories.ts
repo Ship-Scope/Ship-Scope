@@ -73,6 +73,21 @@ export async function createSpec(proposalId: string, overrides = {}) {
   });
 }
 
+export async function createJiraIssue(proposalId: string, overrides = {}) {
+  return prisma.jiraIssue.create({
+    data: {
+      proposalId,
+      jiraKey: 'PROJ-1',
+      jiraId: '10001',
+      jiraUrl: 'https://test.atlassian.net/browse/PROJ-1',
+      issueType: 'Story',
+      summary: 'Test Jira Issue',
+      status: 'To Do',
+      ...overrides,
+    },
+  });
+}
+
 // Create a full pipeline of test data
 export async function createFullPipelineData() {
   const source = await createFeedbackSource();

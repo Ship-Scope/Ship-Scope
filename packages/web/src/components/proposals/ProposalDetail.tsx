@@ -1,10 +1,28 @@
-import { X, Check, XCircle, Rocket, RotateCcw, FileText } from 'lucide-react';
+import {
+  X,
+  Check,
+  XCircle,
+  Rocket,
+  RotateCcw,
+  FileText,
+  ExternalLink,
+  RefreshCw,
+  Unlink,
+  Paperclip,
+} from 'lucide-react';
 import { StatusBadge } from './StatusBadge';
 import { RICEScoreDisplay } from './RICEScoreDisplay';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useProposalDetail, useUpdateProposal, useDeleteProposal } from '@/hooks/useProposals';
 import { useGenerateSpec, useSpecByProposal } from '@/hooks/useSpecs';
+import {
+  useJiraExport,
+  useJiraIssueByProposal,
+  useJiraSyncStatus,
+  useJiraUnlink,
+  useJiraAttachSpec,
+} from '@/hooks/useJira';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 
 interface ProposalDetailProps {
@@ -39,6 +57,11 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
   const deleteMutation = useDeleteProposal();
   const generateSpecMutation = useGenerateSpec();
   const { data: existingSpec } = useSpecByProposal(proposalId);
+  const jiraExportMutation = useJiraExport();
+  const jiraSyncMutation = useJiraSyncStatus();
+  const jiraUnlinkMutation = useJiraUnlink();
+  const jiraAttachSpecMutation = useJiraAttachSpec();
+  const { data: jiraIssue } = useJiraIssueByProposal(proposalId);
 
   if (isLoading) {
     return (
@@ -112,6 +135,88 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
                 <FileText size={14} />
                 Generate Spec
               </Button>
+            )}
+          </div>
+        )}
+
+        {/* Jira Integration */}
+        {(proposal.status === 'approved' || proposal.status === 'shipped') && (
+          <div>
+            {jiraIssue ? (
+              <div className="bg-bg-surface-2 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={jiraIssue.jiraUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-mono text-accent-blue hover:underline flex items-center gap-1"
+                    >
+                      {jiraIssue.jiraKey}
+                      <ExternalLink size={10} />
+                    </a>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+                      {jiraIssue.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => jiraSyncMutation.mutate(proposal.id)}
+                      loading={jiraSyncMutation.isPending}
+                      title="Sync status from Jira"
+                    >
+                      <RefreshCw size={12} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          confirm('Unlink this Jira issue? The issue in Jira will not be deleted.')
+                        ) {
+                          jiraUnlinkMutation.mutate(proposal.id);
+                        }
+                      }}
+                      loading={jiraUnlinkMutation.isPending}
+                      title="Unlink Jira issue"
+                    >
+                      <Unlink size={12} className="text-danger" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted">Linked to Jira</p>
+                {existingSpec && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => jiraAttachSpecMutation.mutate(proposal.id)}
+                    loading={jiraAttachSpecMutation.isPending}
+                    title="Attach PRD spec as a Jira comment"
+                  >
+                    <Paperclip size={12} />
+                    <span className="text-xs">
+                      {jiraAttachSpecMutation.isSuccess ? 'Spec Attached!' : 'Attach Spec to Jira'}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={jiraExportMutation.isPending}
+                onClick={() => jiraExportMutation.mutate(proposal.id)}
+              >
+                Export to Jira
+              </Button>
+            )}
+            {jiraExportMutation.isError && (
+              <p className="text-xs text-danger mt-1">
+                {(jiraExportMutation.error as Error)?.message || 'Failed to export'}
+              </p>
             )}
           </div>
         )}

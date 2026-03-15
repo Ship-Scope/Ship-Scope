@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload, Brain, Lightbulb } from 'lucide-react';
+import { Upload, Brain, Lightbulb, Blocks } from 'lucide-react';
 
 export function QuickActions() {
   const navigate = useNavigate();
@@ -7,7 +7,7 @@ export function QuickActions() {
   const actions = [
     {
       label: 'Import Feedback',
-      description: 'Upload CSV or JSON file',
+      description: 'Upload CSV, JSON, or from Jira',
       icon: <Upload size={20} />,
       onClick: () => navigate('/feedback'),
     },
@@ -23,10 +23,16 @@ export function QuickActions() {
       icon: <Lightbulb size={20} />,
       onClick: () => navigate('/proposals'),
     },
+    {
+      label: 'Jira Integration',
+      description: 'Export, sync & import from Jira',
+      icon: <Blocks size={20} />,
+      onClick: () => navigate('/settings'),
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       {actions.map((action) => (
         <button
           key={action.label}
