@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { FeedbackStats } from '@/components/feedback/FeedbackStats';
 import { FeedbackFilters } from '@/components/feedback/FeedbackFilters';
 import { FeedbackTable } from '@/components/feedback/FeedbackTable';
+import { FeedbackDetail } from '@/components/feedback/FeedbackDetail';
 import { ImportModal } from '@/components/feedback/ImportModal';
 import {
   useFeedbackList,
@@ -29,6 +30,7 @@ export default function FeedbackPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   // Read filters from URL
   const page = parseInt(searchParams.get('page') || '1');
@@ -141,8 +143,9 @@ export default function FeedbackPage() {
         next.delete(id);
         return next;
       });
+      if (detailId === id) setDetailId(null);
     },
-    [deleteMutation],
+    [deleteMutation, detailId],
   );
 
   const handleBulkDelete = useCallback(async () => {
@@ -158,10 +161,16 @@ export default function FeedbackPage() {
     setSelectedIds(new Set());
   }, [selectedIds, markProcessedMutation]);
 
+  const handleToggleExpand = useCallback((id: string) => {
+    setDetailId((prev) => (prev === id ? null : id));
+  }, []);
+
   const items = data?.data || [];
   const pagination = data?.pagination;
   const isEmpty = !isLoading && items.length === 0;
   const hasFilters = search || channel || processed || sentiment || dateFrom || dateTo;
+
+  const detailItem = items.find((item) => item.id === detailId) ?? null;
 
   return (
     <>
@@ -223,9 +232,10 @@ export default function FeedbackPage() {
                 items={items}
                 isLoading={isLoading}
                 selectedIds={selectedIds}
+                expandedId={detailId}
                 onSelectId={handleSelectId}
                 onSelectAll={handleSelectAll}
-                onDelete={handleDelete}
+                onToggleExpand={handleToggleExpand}
                 sortBy={sortBy}
                 sortOrder={sortOrder}
                 onSort={handleSort}
@@ -313,6 +323,12 @@ export default function FeedbackPage() {
       </PageContainer>
 
       <ImportModal isOpen={importOpen} onClose={() => setImportOpen(false)} />
+      <FeedbackDetail
+        item={detailItem}
+        open={!!detailItem}
+        onClose={() => setDetailId(null)}
+        onDelete={handleDelete}
+      />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { importApi } from '@/lib/api';
+import { useToast } from '@/context/ToastContext';
 
 export function useImportPreview() {
   return useMutation({
@@ -9,18 +10,32 @@ export function useImportPreview() {
 
 export function useImportCSV() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   return useMutation({
     mutationFn: ({ file, mapping }: { file: File; mapping?: Record<string, string> }) =>
       importApi.importCSV(file, mapping),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['feedback'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feedback'] });
+      toast.success('CSV imported', 'Feedback items have been added.');
+    },
+    onError: () => {
+      toast.error('Import failed', 'Could not import the CSV file.');
+    },
   });
 }
 
 export function useImportJSON() {
   const qc = useQueryClient();
+  const { toast } = useToast();
   return useMutation({
     mutationFn: (file: File) => importApi.importJSON(file),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['feedback'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feedback'] });
+      toast.success('JSON imported', 'Feedback items have been added.');
+    },
+    onError: () => {
+      toast.error('Import failed', 'Could not import the JSON file.');
+    },
   });
 }
 

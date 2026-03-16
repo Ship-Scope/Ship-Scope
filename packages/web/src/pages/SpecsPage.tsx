@@ -31,11 +31,7 @@ export default function SpecsPage() {
         ) : (
           <div className="flex gap-4">
             {/* Spec list */}
-            <div
-              className={`space-y-3 transition-all ${
-                selectedSpec ? 'w-[calc(100%-496px)]' : 'w-full'
-              }`}
-            >
+            <div className="flex-1 min-w-0 space-y-3 transition-all">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {specs.map((spec) => (
                   <SpecCard
