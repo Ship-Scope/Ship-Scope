@@ -34,14 +34,15 @@ graph LR
 
 ## Features
 
-- **Feedback Ingestion** — Import from CSV, JSON, Jira, manual entry, or webhooks
+- **Feedback Ingestion** — Import from CSV, JSON, Jira, Trello, manual entry, or webhooks
 - **AI Theme Discovery** — Automatically clusters similar feedback into themes using embeddings
 - **Smart Proposals** — AI-generated feature proposals with RICE prioritization
 - **Evidence Linking** — Every proposal is backed by real customer feedback
 - **Spec Generation** — Generate PRDs and agent-ready prompts from approved proposals
 - **Jira Integration** — Bi-directional sync: export proposals/epics to Jira, import Jira issues as feedback, real-time webhook sync
+- **Trello Integration** — Export proposals as cards, themes as lists, import Trello cards as feedback, real-time webhook sync
 - **Dashboard** — Overview of feedback volume, sentiment trends, and top themes
-- **Settings** — AI config, synthesis tuning, Jira configuration, data management, API key management
+- **Settings** — AI config, synthesis tuning, Jira configuration, Trello configuration, data management, API key management
 
 ## Quick Start
 

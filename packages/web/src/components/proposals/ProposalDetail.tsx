@@ -23,6 +23,13 @@ import {
   useJiraUnlink,
   useJiraAttachSpec,
 } from '@/hooks/useJira';
+import {
+  useTrelloExport,
+  useTrelloCardByProposal,
+  useTrelloSyncStatus,
+  useTrelloUnlink,
+  useTrelloAttachSpec,
+} from '@/hooks/useTrello';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 
 interface ProposalDetailProps {
@@ -62,6 +69,11 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
   const jiraUnlinkMutation = useJiraUnlink();
   const jiraAttachSpecMutation = useJiraAttachSpec();
   const { data: jiraIssue } = useJiraIssueByProposal(proposalId);
+  const trelloExportMutation = useTrelloExport();
+  const trelloSyncMutation = useTrelloSyncStatus();
+  const trelloUnlinkMutation = useTrelloUnlink();
+  const trelloAttachSpecMutation = useTrelloAttachSpec();
+  const { data: trelloCard } = useTrelloCardByProposal(proposalId);
 
   if (isLoading) {
     return (
@@ -216,6 +228,92 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
             {jiraExportMutation.isError && (
               <p className="text-xs text-danger mt-1">
                 {(jiraExportMutation.error as Error)?.message || 'Failed to export'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Trello Integration */}
+        {(proposal.status === 'approved' || proposal.status === 'shipped') && (
+          <div>
+            {trelloCard ? (
+              <div className="bg-bg-surface-2 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={trelloCard.cardUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-accent-blue hover:underline flex items-center gap-1"
+                    >
+                      {trelloCard.cardName}
+                      <ExternalLink size={10} />
+                    </a>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+                      {trelloCard.listName}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => trelloSyncMutation.mutate(proposal.id)}
+                      loading={trelloSyncMutation.isPending}
+                      title="Sync status from Trello"
+                    >
+                      <RefreshCw size={12} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            'Unlink this Trello card? The card in Trello will not be deleted.',
+                          )
+                        ) {
+                          trelloUnlinkMutation.mutate(proposal.id);
+                        }
+                      }}
+                      loading={trelloUnlinkMutation.isPending}
+                      title="Unlink Trello card"
+                    >
+                      <Unlink size={12} className="text-danger" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted">Linked to Trello</p>
+                {existingSpec && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => trelloAttachSpecMutation.mutate(proposal.id)}
+                    loading={trelloAttachSpecMutation.isPending}
+                    title="Attach PRD spec as a Trello comment"
+                  >
+                    <Paperclip size={12} />
+                    <span className="text-xs">
+                      {trelloAttachSpecMutation.isSuccess
+                        ? 'Spec Attached!'
+                        : 'Attach Spec to Trello'}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={trelloExportMutation.isPending}
+                onClick={() => trelloExportMutation.mutate(proposal.id)}
+              >
+                Export to Trello
+              </Button>
+            )}
+            {trelloExportMutation.isError && (
+              <p className="text-xs text-danger mt-1">
+                {(trelloExportMutation.error as Error)?.message || 'Failed to export'}
               </p>
             )}
           </div>

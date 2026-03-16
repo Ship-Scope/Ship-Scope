@@ -6,13 +6,14 @@ import { ImportProgress } from './ImportProgress';
 import { Button } from '@/components/ui/Button';
 import { useImportPreview, useImportCSV, useImportJSON } from '@/hooks/useImport';
 import { useJiraImportFeedback } from '@/hooks/useJira';
+import { useTrelloImportFeedback } from '@/hooks/useTrello';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type ImportSource = 'file' | 'jira';
+type ImportSource = 'file' | 'jira' | 'trello';
 type Step = 'upload' | 'preview' | 'progress';
 
 export function ImportModal({ isOpen, onClose }: ImportModalProps) {
@@ -37,6 +38,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
   const csvMutation = useImportCSV();
   const jsonMutation = useImportJSON();
   const jiraImportMutation = useJiraImportFeedback();
+  const trelloImportMutation = useTrelloImportFeedback();
 
   const handleFile = useCallback(
     async (f: File) => {
@@ -103,6 +105,14 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
     }
   }, [jql, jiraImportMutation]);
 
+  const handleTrelloImport = useCallback(async () => {
+    try {
+      await trelloImportMutation.mutateAsync();
+    } catch {
+      setError('Trello import failed. Check your Trello configuration in Settings.');
+    }
+  }, [trelloImportMutation]);
+
   const handleClose = useCallback(() => {
     setImportSource('file');
     setStep('upload');
@@ -125,11 +135,13 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
   const stepTitle =
     importSource === 'jira'
       ? 'Import from Jira'
-      : step === 'upload'
-        ? 'Import Feedback'
-        : step === 'preview'
-          ? 'Import Feedback — Map Columns'
-          : 'Import Feedback — Importing...';
+      : importSource === 'trello'
+        ? 'Import from Trello'
+        : step === 'upload'
+          ? 'Import Feedback'
+          : step === 'preview'
+            ? 'Import Feedback — Map Columns'
+            : 'Import Feedback — Importing...';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -171,6 +183,19 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
           >
             From Jira
           </button>
+          <button
+            onClick={() => {
+              setImportSource('trello');
+              setError('');
+            }}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              importSource === 'trello'
+                ? 'text-accent-blue border-b-2 border-accent-blue'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            From Trello
+          </button>
         </div>
 
         {/* Body */}
@@ -205,6 +230,24 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
                   <CheckCircle2 size={14} />
                   Imported {jiraImportMutation.data.imported} items (
                   {jiraImportMutation.data.skipped} duplicates skipped)
+                </p>
+              )}
+              {error && <p className="text-sm text-danger">{error}</p>}
+            </div>
+          ) : importSource === 'trello' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-text-secondary">
+                Import cards from your configured Trello list as feedback items for AI analysis.
+              </p>
+              <Button onClick={handleTrelloImport} loading={trelloImportMutation.isPending}>
+                <Download size={14} />
+                Import from Trello
+              </Button>
+              {trelloImportMutation.data && (
+                <p className="text-sm text-success flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  Imported {trelloImportMutation.data.imported} items (
+                  {trelloImportMutation.data.skipped} duplicates skipped)
                 </p>
               )}
               {error && <p className="text-sm text-danger">{error}</p>}

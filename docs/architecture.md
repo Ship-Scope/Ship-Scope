@@ -44,6 +44,7 @@ graph TB
 
     subgraph "External Integrations"
         JIRA[Jira Cloud<br/>REST API v3]
+        TRELLO[Trello<br/>REST API]
     end
 
     WEB -->|REST API| EXPRESS
@@ -53,6 +54,8 @@ graph TB
     SERVICES -->|Enqueue jobs| REDIS
     SERVICES -->|Export / Import / Sync| JIRA
     JIRA -->|Webhooks| EXPRESS
+    SERVICES -->|Export / Import / Sync| TRELLO
+    TRELLO -->|Webhooks| EXPRESS
     WORKERS -->|Process jobs| REDIS
     WORKERS --> OPENAI
     WORKERS --> PG
@@ -119,6 +122,7 @@ graph TD
 | Express Routes   | HTTP parsing, validation, response formatting   | Business logic, direct DB queries            |
 | Service Layer    | Business logic, orchestration, caching          | HTTP concerns, direct Prisma calls in routes |
 | Jira Service     | Jira API integration, export/import/sync        | UI rendering, HTTP concerns                  |
+| Trello Service   | Trello API integration, export/import/sync      | UI rendering, HTTP concerns                  |
 | Prisma ORM       | Database queries, migrations, type-safe access  | Business logic, HTTP concerns                |
 | BullMQ Workers   | Background job processing, AI pipeline          | Serving HTTP requests                        |
 | React Components | UI rendering, user interaction                  | Direct API calls (uses TanStack Query)       |
@@ -140,7 +144,7 @@ erDiagram
     }
 ```
 
-Key tables: FeedbackItem, Theme, Proposal, Spec, JiraIssue, ApiKey, Setting, ActivityLog
+Key tables: FeedbackItem, Theme, Proposal, Spec, JiraIssue, TrelloCard, ApiKey, Setting, ActivityLog
 
 ## Security Layers
 

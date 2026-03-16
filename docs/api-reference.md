@@ -569,3 +569,183 @@ Get Jira integration summary for the dashboard widget.
   }
 }
 ```
+
+---
+
+## Trello Integration
+
+### PUT /api/trello/config
+
+Save Trello configuration settings.
+
+**Request Body:**
+
+| Field             | Type   | Required | Description      |
+| ----------------- | ------ | -------- | ---------------- |
+| `trello_api_key`  | string | No       | Trello API key   |
+| `trello_token`    | string | No       | Trello token     |
+| `trello_board_id` | string | No       | Default board ID |
+| `trello_list_id`  | string | No       | Default list ID  |
+
+**Response 200:**
+
+```json
+{ "data": { "saved": true } }
+```
+
+### POST /api/trello/test
+
+Test the Trello connection with current credentials.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "success": true,
+    "message": "Connected as Test User",
+    "username": "testuser"
+  }
+}
+```
+
+### GET /api/trello/boards
+
+List Trello boards for the authenticated user.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "board123", "name": "My Board", "url": "https://trello.com/b/board123" }] }
+```
+
+### GET /api/trello/lists
+
+List open lists for the configured board.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "list456", "name": "To Do", "closed": false }] }
+```
+
+### POST /api/trello/export/:proposalId
+
+Export a proposal to Trello as a new card. The description includes problem, solution, RICE scores, and customer evidence in Markdown.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "cardId": "card123",
+    "cardUrl": "https://trello.com/c/card123"
+  }
+}
+```
+
+### POST /api/trello/sync/:proposalId
+
+Sync the Trello card status (list name) back to the local record.
+
+**Response 200:**
+
+```json
+{ "data": { "cardId": "card123", "listName": "In Progress" } }
+```
+
+### GET /api/trello/cards
+
+List all exported Trello cards with linked proposal data.
+
+### GET /api/trello/cards/:proposalId
+
+Get the Trello card linked to a specific proposal. Returns `null` if no link exists.
+
+### DELETE /api/trello/cards/:proposalId
+
+Unlink a Trello card from a proposal (does not delete the Trello card). Returns `204`.
+
+### POST /api/trello/export-theme/:themeId
+
+Export a theme as a Trello list with all its proposals as cards.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "listName": "[ShipScope] Onboarding Friction",
+    "cardsCreated": 3,
+    "cardsSkipped": 1
+  }
+}
+```
+
+### POST /api/trello/attach-spec/:proposalId
+
+Attach the generated PRD spec as a comment on the linked Trello card.
+
+**Response 200:**
+
+```json
+{ "data": { "cardId": "card123", "commented": true } }
+```
+
+### POST /api/trello/import-feedback
+
+Import Trello cards as ShipScope feedback items.
+
+**Request Body:**
+
+| Field        | Type   | Required | Description                               |
+| ------------ | ------ | -------- | ----------------------------------------- |
+| `listId`     | string | No       | Trello list ID (default: configured list) |
+| `maxResults` | number | No       | Max items to import (capped at 100)       |
+
+**Response 201:**
+
+```json
+{ "data": { "imported": 12, "skipped": 3, "sourceId": "uuid" } }
+```
+
+### POST /api/trello/sync-all
+
+Sync status for all linked Trello cards. Automatically marks proposals as "shipped" when the card moves to a Done/Complete list.
+
+**Response 200:**
+
+```json
+{ "data": { "synced": 10, "autoShipped": 2, "errors": 0 } }
+```
+
+### POST /api/trello/webhook
+
+Receive Trello webhook events for real-time card movement sync.
+
+**Response 200:**
+
+```json
+{ "data": { "processed": true, "cardId": "card123" } }
+```
+
+### HEAD /api/trello/webhook
+
+Trello verifies webhook URLs with a HEAD request. Returns `200`.
+
+### GET /api/trello/dashboard
+
+Get Trello integration summary for the dashboard widget.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "totalExported": 15,
+    "byList": { "To Do": 5, "In Progress": 8, "Done": 2 },
+    "recentExports": []
+  }
+}
+```

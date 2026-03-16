@@ -82,6 +82,10 @@ model Theme {
   jiraEpicKey  String?  // e.g. "PROJ-100" — linked Jira Epic
   jiraEpicUrl  String?  // Full URL to the Jira Epic
 
+  // Trello Integration
+  trelloBoardListId String?  // Trello list ID where theme cards are created
+  trelloBoardListUrl String? // URL to the Trello board
+
   // Relations
   feedbackItems FeedbackThemeLink[]
   proposals     Proposal[]
@@ -130,6 +134,7 @@ model Proposal {
   evidence    ProposalEvidence[]
   specs       Spec[]
   jiraIssue   JiraIssue?
+  trelloCard  TrelloCard?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -238,4 +243,31 @@ model JiraIssue {
   @@index([proposalId])
   @@index([epicKey])
   @@map("jira_issues")
+}
+
+// ============================================
+// TRELLO INTEGRATION
+// ============================================
+
+model TrelloCard {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+
+  // Trello card data
+  cardId      String   // Trello card ID
+  cardUrl     String   // Full URL to the card
+  listName    String   @default("To Do") // Current list name (acts as status)
+  cardName    String   // Card title
+  boardId     String   // Board the card belongs to
+  syncedAt    DateTime @default(now())
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([proposalId])
+  @@unique([cardId])
+  @@index([proposalId])
+  @@index([boardId])
+  @@map("trello_cards")
 }
