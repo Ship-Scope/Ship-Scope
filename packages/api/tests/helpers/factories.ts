@@ -88,6 +88,20 @@ export async function createJiraIssue(proposalId: string, overrides = {}) {
   });
 }
 
+export async function createTrelloCard(proposalId: string, overrides = {}) {
+  return prisma.trelloCard.create({
+    data: {
+      proposalId,
+      cardId: 'card123abc',
+      cardUrl: 'https://trello.com/c/card123abc',
+      listName: 'To Do',
+      cardName: 'Test Trello Card',
+      boardId: 'board123',
+      ...overrides,
+    },
+  });
+}
+
 // Create a full pipeline of test data
 export async function createFullPipelineData() {
   const source = await createFeedbackSource();

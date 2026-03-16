@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 import { useThemeDetail } from '@/hooks/useThemes';
 import { useJiraExportTheme } from '@/hooks/useJira';
+import { useTrelloExportTheme } from '@/hooks/useTrello';
 
 interface ThemeDetailProps {
   themeId: string;
@@ -34,6 +35,7 @@ const categoryVariants: Record<string, 'blue' | 'green' | 'yellow' | 'red' | 'gr
 export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
   const { data: theme, isLoading } = useThemeDetail(themeId);
   const epicExportMutation = useJiraExportTheme();
+  const trelloExportMutation = useTrelloExportTheme();
 
   if (isLoading) {
     return (
@@ -150,6 +152,53 @@ export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
           {epicExportMutation.isError && (
             <p className="text-xs text-danger mt-2">
               Export failed. Check your Jira configuration in Settings.
+            </p>
+          )}
+        </div>
+
+        {/* Trello List Export */}
+        <div>
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+            Trello Integration
+          </h4>
+          {theme.trelloBoardListId ? (
+            <div className="bg-bg-surface-2 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-muted">Linked as List:</span>
+                {theme.trelloBoardListUrl ? (
+                  <a
+                    href={theme.trelloBoardListUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-accent-blue hover:underline flex items-center gap-1"
+                  >
+                    View Board
+                    <ExternalLink size={10} />
+                  </a>
+                ) : (
+                  <span className="text-sm text-text-secondary">Exported</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => trelloExportMutation.mutate(themeId)}
+              loading={trelloExportMutation.isPending}
+            >
+              Export as Trello List
+            </Button>
+          )}
+          {trelloExportMutation.isSuccess && trelloExportMutation.data && (
+            <p className="text-xs text-success mt-2">
+              Created list &ldquo;{trelloExportMutation.data.listName}&rdquo; with{' '}
+              {trelloExportMutation.data.cardsCreated} cards
+            </p>
+          )}
+          {trelloExportMutation.isError && (
+            <p className="text-xs text-danger mt-2">
+              Export failed. Check your Trello configuration in Settings.
             </p>
           )}
         </div>

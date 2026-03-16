@@ -35,6 +35,7 @@ export function ThemeCard({ theme, onClick }: ThemeCardProps) {
         <h3 className="text-sm font-medium text-text-primary leading-tight">{theme.name}</h3>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {theme.jiraEpicKey && <Badge variant="blue">Epic</Badge>}
+          {theme.trelloBoardListId && <Badge variant="green">Trello</Badge>}
           {theme.category && (
             <Badge variant={categoryVariants[theme.category] || 'gray'}>
               {categoryLabels[theme.category] || theme.category}

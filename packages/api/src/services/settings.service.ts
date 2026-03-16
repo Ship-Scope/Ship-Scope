@@ -36,6 +36,11 @@ export const settingsService = {
       const token = result['jira_api_token'];
       result['jira_api_token'] = token.slice(0, 4) + '...' + token.slice(-4);
     }
+    // Mask the Trello token
+    if (result['trello_token']) {
+      const token = result['trello_token'];
+      result['trello_token'] = token.slice(0, 4) + '...' + token.slice(-4);
+    }
     return result;
   },
 

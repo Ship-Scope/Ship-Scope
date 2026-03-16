@@ -1,4 +1,4 @@
-import { Upload, Brain, Lightbulb, FileText, Blocks } from 'lucide-react';
+import { Upload, Brain, Lightbulb, FileText, Blocks, Trello } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import type { ActivityEntry } from '@/lib/api';
 
@@ -8,6 +8,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
   proposal_generation: <Lightbulb size={16} className="text-warning" />,
   spec_generation: <FileText size={16} className="text-success" />,
   jira_export: <Blocks size={16} className="text-accent-blue" />,
+  trello_export: <Trello size={16} className="text-accent-blue" />,
 };
 
 export function ActivityFeed({ activities }: { activities: ActivityEntry[] }) {

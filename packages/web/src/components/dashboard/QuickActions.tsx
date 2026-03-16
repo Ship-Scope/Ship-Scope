@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload, Brain, Lightbulb, Blocks } from 'lucide-react';
+import { Upload, Brain, Lightbulb, Blocks, Trello } from 'lucide-react';
 
 export function QuickActions() {
   const navigate = useNavigate();
@@ -27,6 +27,12 @@ export function QuickActions() {
       label: 'Jira Integration',
       description: 'Export, sync & import from Jira',
       icon: <Blocks size={20} />,
+      onClick: () => navigate('/settings'),
+    },
+    {
+      label: 'Trello Integration',
+      description: 'Export, sync & import from Trello',
+      icon: <Trello size={20} />,
       onClick: () => navigate('/settings'),
     },
   ];

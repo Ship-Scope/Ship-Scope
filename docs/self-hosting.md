@@ -114,6 +114,29 @@ To receive instant status updates when Jira issues change:
 
 When a Jira issue reaches Done/Closed/Resolved, ShipScope will automatically mark the linked proposal as "shipped".
 
+## Trello Integration (Optional)
+
+Trello is configured through the Settings UI after deployment — no environment variables needed.
+
+### Setup
+
+1. Go to **Settings → Trello Integration** in the ShipScope UI
+2. Get your API key from [trello.com/power-ups/admin](https://trello.com/power-ups/admin)
+3. Generate a token using the link on the API key page
+4. Enter both values in settings and click **Test Connection**
+5. Select your default board and list from the dropdowns
+6. Click **Save**
+
+### Real-Time Sync via Webhooks
+
+Trello webhooks are registered via the API (not through the Trello UI). The callback URL is:
+
+```
+https://your-domain.com/api/trello/webhook
+```
+
+When a Trello card moves to a Done/Complete/Shipped/Released/Closed list, ShipScope will automatically mark the linked proposal as "shipped".
+
 ## Updating
 
 ```bash

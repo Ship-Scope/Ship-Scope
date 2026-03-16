@@ -170,6 +170,8 @@ export interface ThemeItem {
   opportunityScore: number;
   jiraEpicKey: string | null;
   jiraEpicUrl: string | null;
+  trelloBoardListId: string | null;
+  trelloBoardListUrl: string | null;
   createdAt: string;
   updatedAt: string;
   feedbackItems: {
@@ -574,4 +576,150 @@ export const jiraApi = {
   // Dashboard
   dashboardSummary: () =>
     api.get<{ data: JiraDashboardSummary }>('/jira/dashboard').then((r) => r.data.data),
+};
+
+// ============================================
+// Trello Integration API
+// ============================================
+
+export interface TrelloTestResult {
+  success: boolean;
+  message: string;
+  username?: string;
+}
+
+export interface TrelloBoard {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export interface TrelloList {
+  id: string;
+  name: string;
+  closed: boolean;
+}
+
+export interface TrelloExportResult {
+  id: string;
+  cardId: string;
+  cardUrl: string;
+}
+
+export interface TrelloThemeExportResult {
+  listName: string;
+  cardsCreated: number;
+  cardsSkipped: number;
+}
+
+export interface TrelloImportResult {
+  imported: number;
+  skipped: number;
+  sourceId: string;
+}
+
+export interface TrelloSyncAllResult {
+  synced: number;
+  autoShipped: number;
+  errors: number;
+}
+
+export interface TrelloDashboardSummary {
+  totalExported: number;
+  byList: Record<string, number>;
+  recentExports: {
+    cardId: string;
+    cardName: string;
+    listName: string;
+    cardUrl: string;
+    createdAt: string;
+  }[];
+}
+
+export interface TrelloCreateBoardResult {
+  boardId: string;
+  boardUrl: string;
+  listId: string;
+}
+
+export interface TrelloCardItem {
+  id: string;
+  proposalId: string;
+  cardId: string;
+  cardUrl: string;
+  listName: string;
+  cardName: string;
+  boardId: string;
+  syncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  proposal: {
+    id: string;
+    title: string;
+    status: string;
+    riceScore: number | null;
+  };
+}
+
+export const trelloApi = {
+  // Configuration
+  saveConfig: (config: Record<string, string>) =>
+    api.put<{ data: { saved: boolean } }>('/trello/config', config).then((r) => r.data.data),
+
+  testConnection: () =>
+    api.post<{ data: TrelloTestResult }>('/trello/test').then((r) => r.data.data),
+
+  listBoards: () => api.get<{ data: TrelloBoard[] }>('/trello/boards').then((r) => r.data.data),
+
+  listLists: () => api.get<{ data: TrelloList[] }>('/trello/lists').then((r) => r.data.data),
+
+  // Export & Sync
+  exportProposal: (proposalId: string) =>
+    api.post<{ data: TrelloExportResult }>(`/trello/export/${proposalId}`).then((r) => r.data.data),
+
+  syncStatus: (proposalId: string) =>
+    api
+      .post<{
+        data: { cardId: string; listName: string; titleUpdated: boolean };
+      }>(`/trello/sync/${proposalId}`)
+      .then((r) => r.data.data),
+
+  listCards: () => api.get<{ data: TrelloCardItem[] }>('/trello/cards').then((r) => r.data.data),
+
+  getByProposal: (proposalId: string) =>
+    api
+      .get<{ data: TrelloCardItem | null }>(`/trello/cards/${proposalId}`)
+      .then((r) => r.data.data),
+
+  unlink: (proposalId: string) => api.delete(`/trello/cards/${proposalId}`),
+
+  // Theme → List bulk export
+  exportTheme: (themeId: string) =>
+    api
+      .post<{ data: TrelloThemeExportResult }>(`/trello/export-theme/${themeId}`)
+      .then((r) => r.data.data),
+
+  // Spec attachment
+  attachSpec: (proposalId: string) =>
+    api
+      .post<{ data: { cardId: string; commented: boolean } }>(`/trello/attach-spec/${proposalId}`)
+      .then((r) => r.data.data),
+
+  // Import from Trello
+  importFeedback: (options?: { listId?: string; maxResults?: number }) =>
+    api
+      .post<{ data: TrelloImportResult }>('/trello/import-feedback', options || {})
+      .then((r) => r.data.data),
+
+  // Bulk sync
+  syncAll: () =>
+    api.post<{ data: TrelloSyncAllResult }>('/trello/sync-all').then((r) => r.data.data),
+
+  // Dashboard
+  dashboardSummary: () =>
+    api.get<{ data: TrelloDashboardSummary }>('/trello/dashboard').then((r) => r.data.data),
+
+  // Board template
+  createBoard: () =>
+    api.post<{ data: TrelloCreateBoardResult }>('/trello/create-board').then((r) => r.data.data),
 };

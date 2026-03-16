@@ -20,6 +20,7 @@ import webhookRoutes from './routes/webhook';
 import settingsRoutes from './routes/settings';
 import dashboardRoutes from './routes/dashboard';
 import jiraRoutes from './routes/jira';
+import trelloRoutes from './routes/trello';
 
 export function createApp() {
   const app = express();
@@ -64,6 +65,7 @@ export function createApp() {
   app.use('/api/feedback/webhook', demoGuard, webhookRoutes);
   app.use('/api/settings', demoGuard, settingsRoutes);
   app.use('/api/jira', demoGuard, jiraRoutes);
+  app.use('/api/trello', demoGuard, trelloRoutes);
   app.use('/api/dashboard', dashboardRoutes);
 
   // Error handler (must be last)
