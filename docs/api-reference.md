@@ -390,3 +390,182 @@ List API keys (prefix only).
 ### DELETE /api/settings/api-keys/:id
 
 Revoke an API key.
+
+---
+
+## Jira Integration
+
+### PUT /api/jira/config
+
+Save Jira configuration settings.
+
+**Request Body:**
+
+| Field              | Type   | Required | Description                        |
+| ------------------ | ------ | -------- | ---------------------------------- |
+| `jira_host`        | string | No       | Jira instance URL (must be HTTPS)  |
+| `jira_email`       | string | No       | Jira account email                 |
+| `jira_api_token`   | string | No       | Jira API token                     |
+| `jira_project_key` | string | No       | Default project key (max 20 chars) |
+| `jira_issue_type`  | string | No       | Default issue type (max 50 chars)  |
+
+**Response 200:**
+
+```json
+{ "data": { "saved": true } }
+```
+
+### POST /api/jira/test
+
+Test the Jira connection with current credentials.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "success": true,
+    "message": "Connected to My Jira",
+    "serverTitle": "My Jira"
+  }
+}
+```
+
+### GET /api/jira/projects
+
+List available Jira projects for the connected account.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "10000", "key": "PROJ", "name": "My Project" }] }
+```
+
+### GET /api/jira/issue-types
+
+List issue types for the configured project (excludes subtasks).
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "10001", "name": "Story", "subtask": false }] }
+```
+
+### POST /api/jira/export/:proposalId
+
+Export a proposal to Jira as a new issue. The description is formatted in ADF with problem, solution, RICE scores, and customer evidence.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "jiraKey": "PROJ-42",
+    "jiraUrl": "https://your-jira.atlassian.net/browse/PROJ-42"
+  }
+}
+```
+
+### POST /api/jira/sync/:proposalId
+
+Sync the Jira issue status back to the local record.
+
+**Response 200:**
+
+```json
+{ "data": { "jiraKey": "PROJ-42", "status": "In Progress" } }
+```
+
+### GET /api/jira/issues
+
+List all exported Jira issues with linked proposal data.
+
+### GET /api/jira/issues/:proposalId
+
+Get the Jira issue linked to a specific proposal. Returns `null` if no link exists.
+
+### DELETE /api/jira/issues/:proposalId
+
+Unlink a Jira issue from a proposal (does not delete the Jira issue). Returns `204`.
+
+### POST /api/jira/export-theme/:themeId
+
+Export a theme as a Jira Epic with all its proposals as child Stories.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "epicKey": "PROJ-100",
+    "epicUrl": "https://your-jira.atlassian.net/browse/PROJ-100",
+    "storiesCreated": 3,
+    "storiesSkipped": 1
+  }
+}
+```
+
+### POST /api/jira/attach-spec/:proposalId
+
+Attach the generated PRD spec as a formatted comment on the linked Jira issue.
+
+**Response 200:**
+
+```json
+{ "data": { "jiraKey": "PROJ-42", "commented": true } }
+```
+
+### POST /api/jira/import-feedback
+
+Import Jira issues as ShipScope feedback items.
+
+**Request Body:**
+
+| Field        | Type   | Required | Description                                      |
+| ------------ | ------ | -------- | ------------------------------------------------ |
+| `jql`        | string | No       | Custom JQL query (default: project bugs/stories) |
+| `maxResults` | number | No       | Max items to import (capped at 100)              |
+
+**Response 201:**
+
+```json
+{ "data": { "imported": 12, "skipped": 3, "sourceId": "uuid" } }
+```
+
+### POST /api/jira/sync-all
+
+Sync status for all linked Jira issues. Automatically marks proposals as "shipped" when the Jira issue status reaches Done/Closed/Resolved.
+
+**Response 200:**
+
+```json
+{ "data": { "synced": 10, "autoShipped": 2, "errors": 0 } }
+```
+
+### POST /api/jira/webhook
+
+Receive Jira webhook events for real-time status sync. Configure in Jira under Settings > System > Webhooks.
+
+**Response 200:**
+
+```json
+{ "data": { "processed": true, "jiraKey": "PROJ-42" } }
+```
+
+### GET /api/jira/dashboard
+
+Get Jira integration summary for the dashboard widget.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "totalExported": 15,
+    "byStatus": { "To Do": 5, "In Progress": 8, "Done": 2 },
+    "recentExports": [],
+    "epicCount": 3
+  }
+}
+```

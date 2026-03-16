@@ -33,11 +33,14 @@ export function ThemeCard({ theme, onClick }: ThemeCardProps) {
     <Card hover onClick={onClick}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="text-sm font-medium text-text-primary leading-tight">{theme.name}</h3>
-        {theme.category && (
-          <Badge variant={categoryVariants[theme.category] || 'gray'}>
-            {categoryLabels[theme.category] || theme.category}
-          </Badge>
-        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {theme.jiraEpicKey && <Badge variant="blue">Epic</Badge>}
+          {theme.category && (
+            <Badge variant={categoryVariants[theme.category] || 'gray'}>
+              {categoryLabels[theme.category] || theme.category}
+            </Badge>
+          )}
+        </div>
       </div>
 
       <p className="text-xs text-text-secondary line-clamp-2 mb-4">{theme.description}</p>

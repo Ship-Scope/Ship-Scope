@@ -1,9 +1,10 @@
-import { X } from 'lucide-react';
+import { X, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 import { useThemeDetail } from '@/hooks/useThemes';
+import { useJiraExportTheme } from '@/hooks/useJira';
 
 interface ThemeDetailProps {
   themeId: string;
@@ -32,6 +33,7 @@ const categoryVariants: Record<string, 'blue' | 'green' | 'yellow' | 'red' | 'gr
 
 export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
   const { data: theme, isLoading } = useThemeDetail(themeId);
+  const epicExportMutation = useJiraExportTheme();
 
   if (isLoading) {
     return (
@@ -108,6 +110,49 @@ export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
             </ul>
           </div>
         )}
+
+        {/* Jira Epic Export */}
+        <div>
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+            Jira Integration
+          </h4>
+          {theme.jiraEpicKey ? (
+            <div className="bg-bg-surface-2 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-muted">Linked as Epic:</span>
+                <a
+                  href={theme.jiraEpicUrl || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-mono text-accent-blue hover:underline flex items-center gap-1"
+                >
+                  {theme.jiraEpicKey}
+                  <ExternalLink size={10} />
+                </a>
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => epicExportMutation.mutate(themeId)}
+              loading={epicExportMutation.isPending}
+            >
+              Export as Jira Epic
+            </Button>
+          )}
+          {epicExportMutation.isSuccess && epicExportMutation.data && (
+            <p className="text-xs text-success mt-2">
+              Created Epic {epicExportMutation.data.epicKey} with{' '}
+              {epicExportMutation.data.storiesCreated} stories
+            </p>
+          )}
+          {epicExportMutation.isError && (
+            <p className="text-xs text-danger mt-2">
+              Export failed. Check your Jira configuration in Settings.
+            </p>
+          )}
+        </div>
 
         {/* Linked Feedback */}
         {theme.feedbackItems && theme.feedbackItems.length > 0 && (

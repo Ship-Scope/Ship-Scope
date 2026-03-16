@@ -96,7 +96,7 @@ export async function generateFromThemes(topN = 20): Promise<ProposalGenerationR
   });
 
   if (themes.length === 0) {
-    throw NotFound('No themes found. Run synthesis first.');
+    throw BadRequest('No themes found. Run synthesis first to discover themes from your feedback.');
   }
 
   const result: ProposalGenerationResult = {
