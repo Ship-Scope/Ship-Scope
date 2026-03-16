@@ -19,6 +19,7 @@ import {
   useJiraIssues,
   useJiraImportFeedback,
   useJiraSyncAll,
+  useJiraFields,
 } from '@/hooks/useJira';
 
 interface JiraConfigSectionProps {
@@ -33,6 +34,12 @@ export function JiraConfigSection({ settings, onUpdate }: JiraConfigSectionProps
   const [showToken, setShowToken] = useState(false);
   const [projectKey, setProjectKey] = useState(settings['jira_project_key'] || '');
   const [issueType, setIssueType] = useState(settings['jira_issue_type'] || 'Story');
+  const [storyPointsField, setStoryPointsField] = useState(
+    settings['jira_story_points_field'] || '',
+  );
+  const [doneStatuses, setDoneStatuses] = useState(settings['jira_done_statuses'] || '');
+  const [epicNameField, setEpicNameField] = useState(settings['jira_epic_name_field'] || '');
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [jql, setJql] = useState('');
   const [copiedWebhook, setCopiedWebhook] = useState(false);
@@ -41,6 +48,7 @@ export function JiraConfigSection({ settings, onUpdate }: JiraConfigSectionProps
   const saveMutation = useJiraSaveConfig();
   const projectsQuery = useJiraProjects();
   const issueTypesQuery = useJiraIssueTypes();
+  const fieldsQuery = useJiraFields();
   const { data: jiraIssues } = useJiraIssues();
   const importMutation = useJiraImportFeedback();
   const syncAllMutation = useJiraSyncAll();
@@ -56,6 +64,10 @@ export function JiraConfigSection({ settings, onUpdate }: JiraConfigSectionProps
     if (apiToken.trim()) config['jira_api_token'] = apiToken.trim();
     if (projectKey.trim()) config['jira_project_key'] = projectKey.trim();
     if (issueType.trim()) config['jira_issue_type'] = issueType.trim();
+    // Advanced fields — save even if empty (to clear previous values)
+    config['jira_story_points_field'] = storyPointsField.trim();
+    config['jira_done_statuses'] = doneStatuses.trim();
+    config['jira_epic_name_field'] = epicNameField.trim();
 
     saveMutation.mutate(config, {
       onSuccess: () => {
@@ -243,6 +255,109 @@ export function JiraConfigSection({ settings, onUpdate }: JiraConfigSectionProps
           Test Connection
         </Button>
       </div>
+
+      {/* Advanced Configuration */}
+      {isConfigured && (
+        <div className="pt-4 border-t border-border">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="text-sm font-medium text-text-secondary hover:text-text-primary flex items-center gap-1"
+          >
+            {showAdvanced ? '▾' : '▸'} Advanced Configuration
+          </button>
+          <p className="text-[10px] text-text-muted mt-1">
+            Customize field mappings for your organization&apos;s Jira setup.
+          </p>
+
+          {showAdvanced && (
+            <div className="mt-3 space-y-4">
+              {/* Story Points Field */}
+              <div>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-text-primary block mb-1.5">
+                      Story Points Field
+                    </label>
+                    {fieldsQuery.data && fieldsQuery.data.length > 0 ? (
+                      <select
+                        value={storyPointsField}
+                        onChange={(e) => setStoryPointsField(e.target.value)}
+                        className="w-full bg-bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary"
+                      >
+                        <option value="">Default (story_points)</option>
+                        {fieldsQuery.data.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.id} — {f.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={storyPointsField}
+                        onChange={(e) => setStoryPointsField(e.target.value)}
+                        placeholder="e.g. customfield_10016 (leave blank for default)"
+                        className="w-full bg-bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted font-mono"
+                      />
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => fieldsQuery.refetch()}
+                    loading={fieldsQuery.isFetching}
+                    title="Load fields from Jira"
+                  >
+                    <RefreshCw size={14} />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-text-muted mt-1">
+                  Many orgs use a custom field like{' '}
+                  <code className="text-[10px]">customfield_10016</code>. Click refresh to
+                  auto-detect.
+                </p>
+              </div>
+
+              {/* Done Statuses */}
+              <div>
+                <label className="text-sm font-medium text-text-primary block mb-1.5">
+                  Done Statuses
+                </label>
+                <input
+                  type="text"
+                  value={doneStatuses}
+                  onChange={(e) => setDoneStatuses(e.target.value)}
+                  placeholder="Done, Closed, Resolved, Released"
+                  className="w-full bg-bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted"
+                />
+                <p className="text-[10px] text-text-muted mt-1">
+                  Comma-separated list of Jira statuses that mark a proposal as shipped. Leave blank
+                  for defaults.
+                </p>
+              </div>
+
+              {/* Epic Name Field */}
+              <div>
+                <label className="text-sm font-medium text-text-primary block mb-1.5">
+                  Epic Name Field (optional)
+                </label>
+                <input
+                  type="text"
+                  value={epicNameField}
+                  onChange={(e) => setEpicNameField(e.target.value)}
+                  placeholder="e.g. customfield_10011 (leave blank if not needed)"
+                  className="w-full bg-bg-surface-2 border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-muted font-mono"
+                />
+                <p className="text-[10px] text-text-muted mt-1">
+                  Some Jira instances require an &ldquo;Epic Name&rdquo; custom field when creating
+                  Epics.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {saveMutation.isSuccess && (
         <p className="text-xs text-success flex items-center gap-1">

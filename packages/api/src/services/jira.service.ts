@@ -11,6 +11,9 @@ export const JIRA_SETTING_KEYS = {
   JIRA_API_TOKEN: 'jira_api_token',
   JIRA_PROJECT_KEY: 'jira_project_key',
   JIRA_ISSUE_TYPE: 'jira_issue_type',
+  JIRA_STORY_POINTS_FIELD: 'jira_story_points_field',
+  JIRA_DONE_STATUSES: 'jira_done_statuses',
+  JIRA_EPIC_NAME_FIELD: 'jira_epic_name_field',
 } as const;
 
 // ─── Types ────────────────────────────────────────────────
@@ -21,6 +24,9 @@ interface JiraConfig {
   apiToken: string;
   projectKey: string;
   issueType: string;
+  storyPointsField: string;
+  doneStatuses: string[];
+  epicNameField: string;
 }
 
 interface JiraProject {
@@ -51,20 +57,90 @@ interface JiraIssueResponse {
   };
 }
 
+// ─── RICE & Priority Mapping Helpers ─────────────────
+
+function getRiceTierLabel(riceScore: number | null): string {
+  if (riceScore === null) return 'rice-unscored';
+  if (riceScore >= 8) return 'rice-high';
+  if (riceScore >= 4) return 'rice-medium';
+  return 'rice-low';
+}
+
+/**
+ * Map average urgency (0-1) to Jira priority name.
+ * Jira Cloud default priorities: Highest, High, Medium, Low, Lowest
+ */
+function urgencyToJiraPriority(
+  evidence: { feedbackItem: { urgency?: number | null } }[],
+): string | null {
+  if (!evidence.length) return null;
+  const avgUrgency =
+    evidence.reduce((sum, e) => {
+      const u = (e.feedbackItem as { urgency?: number | null }).urgency;
+      return sum + (typeof u === 'number' ? u : 0.5);
+    }, 0) / evidence.length;
+  if (avgUrgency >= 0.8) return 'Highest';
+  if (avgUrgency >= 0.6) return 'High';
+  if (avgUrgency >= 0.4) return 'Medium';
+  if (avgUrgency >= 0.2) return 'Low';
+  return 'Lowest';
+}
+
+/**
+ * Map effort score (1-10) to Fibonacci story points.
+ */
+function effortToStoryPoints(effortScore: number | null): number | null {
+  if (effortScore === null) return null;
+  const map: Record<number, number> = {
+    1: 1,
+    2: 2,
+    3: 3,
+    4: 5,
+    5: 8,
+    6: 8,
+    7: 13,
+    8: 13,
+    9: 21,
+    10: 21,
+  };
+  return map[effortScore] ?? null;
+}
+
 // ─── Helpers ──────────────────────────────────────────────
 
+const DEFAULT_DONE_STATUSES = ['done', 'closed', 'resolved', 'released'];
+
 async function getJiraConfig(): Promise<JiraConfig> {
-  const [host, email, apiToken, projectKey, issueType] = await Promise.all([
+  const [
+    host,
+    email,
+    apiToken,
+    projectKey,
+    issueType,
+    storyPointsField,
+    doneStatuses,
+    epicNameField,
+  ] = await Promise.all([
     settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_HOST),
     settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_EMAIL),
     settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_API_TOKEN),
     settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_PROJECT_KEY),
     settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_ISSUE_TYPE),
+    settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_STORY_POINTS_FIELD),
+    settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_DONE_STATUSES),
+    settingsService.getRaw(JIRA_SETTING_KEYS.JIRA_EPIC_NAME_FIELD),
   ]);
 
   if (!host || !email || !apiToken) {
     throw BadRequest('Jira is not configured. Please set host, email, and API token in settings.');
   }
+
+  const parsedDoneStatuses = doneStatuses
+    ? doneStatuses
+        .split(',')
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    : DEFAULT_DONE_STATUSES;
 
   return {
     host: host.replace(/\/+$/, ''), // strip trailing slashes
@@ -72,6 +148,9 @@ async function getJiraConfig(): Promise<JiraConfig> {
     apiToken,
     projectKey: projectKey || '',
     issueType: issueType || 'Story',
+    storyPointsField: storyPointsField || 'story_points',
+    doneStatuses: parsedDoneStatuses,
+    epicNameField: epicNameField || '',
   };
 }
 
@@ -157,6 +236,31 @@ export const jiraService = {
   },
 
   /**
+   * List available priorities from the Jira instance.
+   * Allows users to see what their instance supports (varies by org).
+   */
+  async listPriorities(): Promise<{ id: string; name: string }[]> {
+    const config = await getJiraConfig();
+    const data = await jiraFetch<{ id: string; name: string; iconUrl?: string }[]>(
+      config,
+      '/priority',
+    );
+    return data.map((p) => ({ id: p.id, name: p.name }));
+  },
+
+  /**
+   * List custom fields from the Jira instance.
+   * Helps users find the correct story points field name.
+   */
+  async listFields(): Promise<{ id: string; name: string; custom: boolean }[]> {
+    const config = await getJiraConfig();
+    const data = await jiraFetch<{ id: string; name: string; custom: boolean }[]>(config, '/field');
+    return data
+      .filter((f) => f.custom || f.name.toLowerCase().includes('story point'))
+      .map((f) => ({ id: f.id, name: f.name, custom: f.custom }));
+  },
+
+  /**
    * Export a proposal to Jira as a new issue.
    */
   async exportProposal(proposalId: string): Promise<{
@@ -180,7 +284,7 @@ export const jiraService = {
     const proposal = await prisma.proposal.findUnique({
       where: { id: proposalId },
       include: {
-        theme: { select: { name: true } },
+        theme: { select: { name: true, category: true } },
         evidence: {
           take: 10,
           orderBy: { relevanceScore: 'desc' },
@@ -196,18 +300,37 @@ export const jiraService = {
     // Build description in Atlassian Document Format (ADF)
     const descriptionAdf = buildJiraDescription(proposal);
 
-    const issueData = {
-      fields: {
-        project: { key: config.projectKey },
-        summary: proposal.title,
-        description: descriptionAdf,
-        issuetype: { name: config.issueType },
-        labels: [
-          'shipscope',
-          proposal.theme?.name ? `theme-${slugify(proposal.theme.name)}` : '',
-        ].filter(Boolean),
-      },
+    // RICE tier label + category label
+    const riceTierLabel = getRiceTierLabel(proposal.riceScore);
+    const categoryLabel = proposal.theme?.category
+      ? `category-${slugify(proposal.theme.category)}`
+      : '';
+
+    // Priority from evidence urgency
+    const priority = urgencyToJiraPriority(
+      proposal.evidence as { feedbackItem: { urgency?: number | null } }[],
+    );
+
+    // Story points from effort
+    const storyPoints = effortToStoryPoints(proposal.effortScore);
+
+    const fields: Record<string, unknown> = {
+      project: { key: config.projectKey },
+      summary: proposal.title,
+      description: descriptionAdf,
+      issuetype: { name: config.issueType },
+      labels: [
+        'shipscope',
+        riceTierLabel,
+        proposal.theme?.name ? `theme-${slugify(proposal.theme.name)}` : '',
+        categoryLabel,
+      ].filter(Boolean),
     };
+
+    if (priority) fields.priority = { name: priority };
+    if (storyPoints !== null) fields[config.storyPointsField] = storyPoints;
+
+    const issueData = { fields };
 
     const result = await jiraFetch<JiraCreateResponse>(config, '/issue', {
       method: 'POST',
@@ -215,6 +338,26 @@ export const jiraService = {
     });
 
     const jiraUrl = `${config.host}/browse/${result.key}`;
+
+    // Add backlink to ShipScope as a Remote Link
+    try {
+      await jiraFetch(config, `/issue/${encodeURIComponent(result.key)}/remotelink`, {
+        method: 'POST',
+        body: JSON.stringify({
+          globalId: `shipscope-proposal-${proposalId}`,
+          application: { type: 'com.shipscope', name: 'ShipScope' },
+          relationship: 'source',
+          object: {
+            url: `${process.env.WEB_URL || 'http://localhost:3000'}/proposals?id=${proposalId}`,
+            title: 'View in ShipScope',
+            summary: `Proposal: ${proposal.title}`,
+            icon: { url16x16: `${process.env.WEB_URL || 'http://localhost:3000'}/favicon.ico` },
+          },
+        }),
+      });
+    } catch {
+      logger.warn(`Could not create remote link for ${result.key}`);
+    }
 
     // Store the link in our database
     const jiraIssue = await prisma.jiraIssue.create({
@@ -314,7 +457,7 @@ export const jiraService = {
       include: {
         proposals: {
           include: {
-            theme: { select: { name: true } },
+            theme: { select: { name: true, category: true } },
             jiraIssue: true,
             evidence: {
               take: 5,
@@ -336,15 +479,20 @@ export const jiraService = {
     }
 
     // 1. Create Epic
-    const epicData = {
-      fields: {
-        project: { key: config.projectKey },
-        summary: theme.name,
-        description: buildEpicDescription(theme),
-        issuetype: { name: 'Epic' },
-        labels: ['shipscope', `category-${theme.category || 'general'}`],
-      },
+    const epicFields: Record<string, unknown> = {
+      project: { key: config.projectKey },
+      summary: theme.name,
+      description: buildEpicDescription(theme),
+      issuetype: { name: 'Epic' },
+      labels: ['shipscope', `category-${theme.category || 'general'}`],
     };
+
+    // Some Jira instances require Epic Name in a custom field
+    if (config.epicNameField) {
+      epicFields[config.epicNameField] = theme.name;
+    }
+
+    const epicData = { fields: epicFields };
 
     const epicResult = await jiraFetch<JiraCreateResponse>(config, '/issue', {
       method: 'POST',
@@ -352,6 +500,25 @@ export const jiraService = {
     });
 
     const epicUrl = `${config.host}/browse/${epicResult.key}`;
+
+    // Remote link for the epic
+    try {
+      await jiraFetch(config, `/issue/${encodeURIComponent(epicResult.key)}/remotelink`, {
+        method: 'POST',
+        body: JSON.stringify({
+          globalId: `shipscope-theme-${themeId}`,
+          application: { type: 'com.shipscope', name: 'ShipScope' },
+          relationship: 'source',
+          object: {
+            url: `${process.env.WEB_URL || 'http://localhost:3000'}/themes?id=${themeId}`,
+            title: 'View Theme in ShipScope',
+            summary: `Theme: ${theme.name}`,
+          },
+        }),
+      });
+    } catch {
+      logger.warn(`Could not create remote link for epic ${epicResult.key}`);
+    }
 
     // Save Epic link on theme
     await prisma.theme.update({
@@ -372,21 +539,46 @@ export const jiraService = {
       try {
         const descriptionAdf = buildJiraDescription(proposal);
 
-        const storyData = {
-          fields: {
-            project: { key: config.projectKey },
-            summary: proposal.title,
-            description: descriptionAdf,
-            issuetype: { name: config.issueType || 'Story' },
-            labels: ['shipscope', `theme-${slugify(theme.name)}`],
-            parent: { key: epicResult.key },
-          },
+        const riceTierLabel = getRiceTierLabel(proposal.riceScore);
+        const priority = urgencyToJiraPriority(
+          proposal.evidence as { feedbackItem: { urgency?: number | null } }[],
+        );
+        const storyPoints = effortToStoryPoints(proposal.effortScore);
+
+        const storyFields: Record<string, unknown> = {
+          project: { key: config.projectKey },
+          summary: proposal.title,
+          description: descriptionAdf,
+          issuetype: { name: config.issueType || 'Story' },
+          labels: ['shipscope', riceTierLabel, `theme-${slugify(theme.name)}`].filter(Boolean),
+          parent: { key: epicResult.key },
         };
+
+        if (priority) storyFields.priority = { name: priority };
+        if (storyPoints !== null) storyFields[config.storyPointsField] = storyPoints;
 
         const storyResult = await jiraFetch<JiraCreateResponse>(config, '/issue', {
           method: 'POST',
-          body: JSON.stringify(storyData),
+          body: JSON.stringify({ fields: storyFields }),
         });
+
+        // Remote link back to ShipScope
+        try {
+          await jiraFetch(config, `/issue/${encodeURIComponent(storyResult.key)}/remotelink`, {
+            method: 'POST',
+            body: JSON.stringify({
+              globalId: `shipscope-proposal-${proposal.id}`,
+              application: { type: 'com.shipscope', name: 'ShipScope' },
+              relationship: 'source',
+              object: {
+                url: `${process.env.WEB_URL || 'http://localhost:3000'}/proposals?id=${proposal.id}`,
+                title: 'View in ShipScope',
+              },
+            }),
+          });
+        } catch {
+          /* non-critical */
+        }
 
         await prisma.jiraIssue.create({
           data: {
@@ -581,9 +773,8 @@ export const jiraService = {
         });
 
         // Auto-mark proposal as "shipped" when Jira issue is Done
-        const doneStatuses = ['done', 'closed', 'resolved', 'released'];
         if (
-          doneStatuses.includes(newStatus.toLowerCase()) &&
+          config.doneStatuses.includes(newStatus.toLowerCase()) &&
           jiraIssue.proposal.status !== 'shipped'
         ) {
           await prisma.proposal.update({
@@ -646,7 +837,13 @@ export const jiraService = {
     });
 
     // Auto-ship proposal if Jira issue is done
-    const doneStatuses = ['done', 'closed', 'resolved', 'released'];
+    let doneStatuses: string[];
+    try {
+      const config = await getJiraConfig();
+      doneStatuses = config.doneStatuses;
+    } catch {
+      doneStatuses = DEFAULT_DONE_STATUSES;
+    }
     if (doneStatuses.includes(newStatus.toLowerCase())) {
       const proposal = await prisma.proposal.findUnique({
         where: { id: jiraIssue.proposalId },
@@ -737,7 +934,7 @@ interface ProposalWithEvidence {
   confidenceScore: number | null;
   effortScore: number | null;
   riceScore: number | null;
-  theme: { name: string } | null;
+  theme: { name: string; category?: string | null } | null;
   evidence: {
     feedbackItem: { content: string; author: string | null; channel: string | null };
   }[];
@@ -797,6 +994,30 @@ function buildJiraDescription(proposal: ProposalWithEvidence) {
       })),
     });
   }
+
+  // Acceptance criteria stub
+  content.push(heading('Acceptance Criteria'));
+  content.push({
+    type: 'bulletList',
+    content: [
+      {
+        type: 'listItem',
+        content: [
+          paragraph(
+            `User can ${proposal.solution.slice(0, 100).toLowerCase().replace(/[.]+$/, '')}`,
+          ),
+        ],
+      },
+      {
+        type: 'listItem',
+        content: [paragraph('Edge cases are handled gracefully with user-facing error messages')],
+      },
+      {
+        type: 'listItem',
+        content: [paragraph('Feature is covered by automated tests')],
+      },
+    ],
+  });
 
   // Generated by
   content.push({
