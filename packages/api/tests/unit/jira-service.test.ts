@@ -119,6 +119,43 @@ describe('Jira Service', () => {
     });
   });
 
+  // ─── listPriorities ────────────────────────────────────
+
+  describe('listPriorities', () => {
+    it('returns priorities from Jira', async () => {
+      await seedJiraConfig();
+      mockFetch([
+        { id: '1', name: 'Highest', iconUrl: 'url' },
+        { id: '2', name: 'High', iconUrl: 'url' },
+        { id: '3', name: 'Medium', iconUrl: 'url' },
+      ]);
+
+      const priorities = await jiraService.listPriorities();
+      expect(priorities).toHaveLength(3);
+      expect(priorities[0].name).toBe('Highest');
+    });
+  });
+
+  // ─── listFields ────────────────────────────────────────
+
+  describe('listFields', () => {
+    it('returns custom fields and story point fields', async () => {
+      await seedJiraConfig();
+      mockFetch([
+        { id: 'summary', name: 'Summary', custom: false },
+        { id: 'customfield_10016', name: 'Story Points', custom: true },
+        { id: 'customfield_10020', name: 'Sprint', custom: true },
+        { id: 'story_points', name: 'Story point estimate', custom: false },
+      ]);
+
+      const fields = await jiraService.listFields();
+      // Should return custom fields + any field matching "story point"
+      expect(fields.length).toBeGreaterThanOrEqual(3);
+      expect(fields.find((f) => f.id === 'customfield_10016')).toBeTruthy();
+      expect(fields.find((f) => f.id === 'story_points')).toBeTruthy();
+    });
+  });
+
   // ─── exportProposal ────────────────────────────────────
 
   describe('exportProposal', () => {
@@ -127,11 +164,26 @@ describe('Jira Service', () => {
       const theme = await createTheme();
       const proposal = await createProposal(theme.id);
 
-      mockFetch({
-        id: '10001',
-        key: 'PROJ-42',
-        self: 'https://test.atlassian.net/rest/api/3/issue/10001',
-      });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      // 1. Create issue
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            id: '10001',
+            key: 'PROJ-42',
+            self: 'https://test.atlassian.net/rest/api/3/issue/10001',
+          }),
+        text: () => Promise.resolve(''),
+      } as Response);
+      // 2. Remote link (backlink)
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 1 }),
+        text: () => Promise.resolve(''),
+      } as Response);
 
       const result = await jiraService.exportProposal(proposal.id);
       expect(result.jiraKey).toBe('PROJ-42');
@@ -166,20 +218,39 @@ describe('Jira Service', () => {
       await expect(jiraService.exportProposal(proposal.id)).rejects.toThrow('project key');
     });
 
-    it('sends correct request to Jira API', async () => {
+    it('sends correct request with RICE labels, priority, and story points', async () => {
       await seedJiraConfig();
-      const theme = await createTheme({ name: 'Performance Issues' });
+      const theme = await createTheme({ name: 'Performance Issues', category: 'performance' });
       const proposal = await createProposal(theme.id, {
         title: 'Optimize Database Queries',
         problem: 'Slow queries',
         solution: 'Add indexes',
+        riceScore: 9.0,
+        reachScore: 8,
+        impactScore: 9,
+        confidenceScore: 8,
+        effortScore: 3,
       });
 
-      const fetchSpy = mockFetch({ id: '10001', key: 'PROJ-1', self: '' });
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      // 1. Create issue
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: '10001', key: 'PROJ-1', self: '' }),
+        text: () => Promise.resolve(''),
+      } as Response);
+      // 2. Create remote link (backlink)
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 1 }),
+        text: () => Promise.resolve(''),
+      } as Response);
 
       await jiraService.exportProposal(proposal.id);
 
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      // Verify issue creation payload
       const [url, options] = fetchSpy.mock.calls[0];
       expect(url).toBe('https://test.atlassian.net/rest/api/3/issue');
       expect(options?.method).toBe('POST');
@@ -189,7 +260,41 @@ describe('Jira Service', () => {
       expect(body.fields.summary).toBe('Optimize Database Queries');
       expect(body.fields.issuetype.name).toBe('Story');
       expect(body.fields.labels).toContain('shipscope');
+      expect(body.fields.labels).toContain('rice-high');
       expect(body.fields.labels).toContain('theme-performance-issues');
+      expect(body.fields.labels).toContain('category-performance');
+      expect(body.fields.story_points).toBe(3); // effort 3 → 3 story points
+
+      // Verify remote link was created
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      const [linkUrl] = fetchSpy.mock.calls[1];
+      expect(linkUrl).toContain('/remotelink');
+    });
+
+    it('uses custom story points field when configured', async () => {
+      await seedJiraConfig({ [JIRA_SETTING_KEYS.JIRA_STORY_POINTS_FIELD]: 'customfield_10016' });
+      const theme = await createTheme();
+      const proposal = await createProposal(theme.id, { effortScore: 5 });
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch');
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: '10002', key: 'PROJ-2', self: '' }),
+        text: () => Promise.resolve(''),
+      } as Response);
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ id: 2 }),
+        text: () => Promise.resolve(''),
+      } as Response);
+
+      await jiraService.exportProposal(proposal.id);
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body.fields.customfield_10016).toBe(8); // effort 5 → 8 story points
+      expect(body.fields.story_points).toBeUndefined();
     });
   });
 
@@ -619,6 +724,26 @@ describe('Jira Service', () => {
 
       expect(result.processed).toBe(true);
       // Status should remain shipped (no extra update)
+      const updatedProposal = await prisma.proposal.findUnique({ where: { id: proposal.id } });
+      expect(updatedProposal!.status).toBe('shipped');
+    });
+
+    it('auto-ships using custom done statuses', async () => {
+      // Configure custom done statuses
+      await seedJiraConfig({
+        [JIRA_SETTING_KEYS.JIRA_DONE_STATUSES]: 'Deployed, Live in Production',
+      });
+      const theme = await createTheme();
+      const proposal = await createProposal(theme.id, { status: 'approved' });
+      await createJiraIssue(proposal.id, { jiraKey: 'PROJ-CUSTOM' });
+
+      await jiraService.handleWebhook({
+        issue: {
+          key: 'PROJ-CUSTOM',
+          fields: { status: { name: 'Deployed' }, summary: 'Custom done' },
+        },
+      });
+
       const updatedProposal = await prisma.proposal.findUnique({ where: { id: proposal.id } });
       expect(updatedProposal!.status).toBe('shipped');
     });

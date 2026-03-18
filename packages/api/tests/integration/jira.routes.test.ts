@@ -68,6 +68,29 @@ describe('Jira Routes', () => {
       expect(res.body.data.saved).toBe(true);
     });
 
+    it('saves advanced config fields', async () => {
+      const res = await request(app)
+        .put('/api/jira/config')
+        .send({
+          jira_story_points_field: 'customfield_10016',
+          jira_done_statuses: 'Deployed, Live',
+          jira_epic_name_field: 'customfield_10011',
+        })
+        .expect(200);
+
+      expect(res.body.data.saved).toBe(true);
+
+      const spField = await prisma.setting.findUnique({
+        where: { key: 'jira_story_points_field' },
+      });
+      expect(spField!.value).toBe('customfield_10016');
+
+      const doneStatuses = await prisma.setting.findUnique({
+        where: { key: 'jira_done_statuses' },
+      });
+      expect(doneStatuses!.value).toBe('Deployed, Live');
+    });
+
     it('rejects non-HTTPS host', async () => {
       await request(app)
         .put('/api/jira/config')
@@ -134,6 +157,39 @@ describe('Jira Routes', () => {
 
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].name).toBe('Story');
+    });
+  });
+
+  // ─── GET /api/jira/priorities ──────────────────────────
+
+  describe('GET /api/jira/priorities', () => {
+    it('returns priorities from Jira', async () => {
+      await seedJiraConfig();
+      mockFetch([
+        { id: '1', name: 'Highest' },
+        { id: '2', name: 'High' },
+        { id: '3', name: 'Medium' },
+      ]);
+
+      const res = await request(app).get('/api/jira/priorities').expect(200);
+      expect(res.body.data).toHaveLength(3);
+      expect(res.body.data[0].name).toBe('Highest');
+    });
+  });
+
+  // ─── GET /api/jira/fields ─────────────────────────────
+
+  describe('GET /api/jira/fields', () => {
+    it('returns custom fields from Jira', async () => {
+      await seedJiraConfig();
+      mockFetch([
+        { id: 'customfield_10016', name: 'Story Points', custom: true },
+        { id: 'summary', name: 'Summary', custom: false },
+      ]);
+
+      const res = await request(app).get('/api/jira/fields').expect(200);
+      expect(res.body.data).toHaveLength(1); // only custom fields
+      expect(res.body.data[0].id).toBe('customfield_10016');
     });
   });
 

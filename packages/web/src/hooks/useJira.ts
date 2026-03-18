@@ -35,6 +35,24 @@ export function useJiraIssueTypes() {
   });
 }
 
+export function useJiraPriorities() {
+  return useQuery({
+    queryKey: ['jira', 'priorities'],
+    queryFn: () => jiraApi.listPriorities(),
+    enabled: false,
+    retry: false,
+  });
+}
+
+export function useJiraFields() {
+  return useQuery({
+    queryKey: ['jira', 'fields'],
+    queryFn: () => jiraApi.listFields(),
+    enabled: false,
+    retry: false,
+  });
+}
+
 export function useJiraExport() {
   const queryClient = useQueryClient();
   return useMutation({

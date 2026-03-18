@@ -536,6 +536,15 @@ export const jiraApi = {
   listIssueTypes: () =>
     api.get<{ data: JiraIssueType[] }>('/jira/issue-types').then((r) => r.data.data),
 
+  // Discovery endpoints (for org-specific configuration)
+  listPriorities: () =>
+    api.get<{ data: { id: string; name: string }[] }>('/jira/priorities').then((r) => r.data.data),
+
+  listFields: () =>
+    api
+      .get<{ data: { id: string; name: string; custom: boolean }[] }>('/jira/fields')
+      .then((r) => r.data.data),
+
   // Export & Sync
   exportProposal: (proposalId: string) =>
     api.post<{ data: JiraExportResult }>(`/jira/export/${proposalId}`).then((r) => r.data.data),

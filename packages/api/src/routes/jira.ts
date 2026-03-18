@@ -67,6 +67,32 @@ router.get('/issue-types', async (_req: Request, res: Response, next: NextFuncti
   }
 });
 
+/**
+ * GET /api/jira/priorities
+ * List available priorities from the Jira instance.
+ */
+router.get('/priorities', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const priorities = await jiraService.listPriorities();
+    res.json({ data: priorities });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/jira/fields
+ * List custom fields (for finding story points field name).
+ */
+router.get('/fields', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const fields = await jiraService.listFields();
+    res.json({ data: fields });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── Export & Sync ────────────────────────────────────────
 
 /**

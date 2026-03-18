@@ -14,4 +14,7 @@ export const jiraConfigSchema = z.object({
   jira_api_token: z.string().min(1).optional(),
   jira_project_key: z.string().min(1).max(20).optional(),
   jira_issue_type: z.string().min(1).max(50).optional(),
+  jira_story_points_field: z.string().max(100).optional(),
+  jira_done_statuses: z.string().max(500).optional(),
+  jira_epic_name_field: z.string().max(100).optional(),
 });
