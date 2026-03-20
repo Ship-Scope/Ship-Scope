@@ -7,7 +7,8 @@ export type ActivityType =
   | 'proposal_generation'
   | 'spec_generation'
   | 'jira_export'
-  | 'trello_export';
+  | 'trello_export'
+  | 'linear_export';
 
 interface LogActivityInput {
   type: ActivityType;

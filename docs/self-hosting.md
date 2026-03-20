@@ -137,6 +137,33 @@ https://your-domain.com/api/trello/webhook
 
 When a Trello card moves to a Done/Complete/Shipped/Released/Closed list, ShipScope will automatically mark the linked proposal as "shipped".
 
+## Linear Integration (Optional)
+
+Linear is configured through the Settings UI after deployment — no environment variables needed.
+
+### Setup
+
+1. Go to **Settings → Linear Integration** in the ShipScope UI
+2. Create a personal API key from [linear.app/settings/api](https://linear.app/settings/api)
+3. Enter the API key in settings and click **Test Connection**
+4. Select your default team from the dropdown
+5. Optionally select a project, labels, and cycle
+6. Click **Save**
+
+### Real-Time Sync via Webhooks
+
+To receive instant status updates when Linear issues change:
+
+1. In Linear, go to **Settings → API → Webhooks**
+2. Create a new webhook pointing to:
+   ```
+   https://your-domain.com/api/linear/webhook
+   ```
+3. Select the **Issues** resource and **Data change** event
+4. Save the webhook
+
+When a Linear issue reaches a configured "Done" state, ShipScope will automatically mark the linked proposal as "shipped".
+
 ## Updating
 
 ```bash

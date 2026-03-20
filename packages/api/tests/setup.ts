@@ -17,6 +17,7 @@ beforeEach(async () => {
   // Clean all tables in dependency order (child tables first)
   await prisma.$transaction([
     prisma.trelloCard.deleteMany(),
+    prisma.linearIssue.deleteMany(),
     prisma.jiraIssue.deleteMany(),
     prisma.proposalEvidence.deleteMany(),
     prisma.spec.deleteMany(),

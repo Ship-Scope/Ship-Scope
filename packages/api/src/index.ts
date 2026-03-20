@@ -21,6 +21,7 @@ import settingsRoutes from './routes/settings';
 import dashboardRoutes from './routes/dashboard';
 import jiraRoutes from './routes/jira';
 import trelloRoutes from './routes/trello';
+import linearRoutes from './routes/linear';
 
 export function createApp() {
   const app = express();
@@ -66,6 +67,7 @@ export function createApp() {
   app.use('/api/settings', demoGuard, settingsRoutes);
   app.use('/api/jira', demoGuard, jiraRoutes);
   app.use('/api/trello', demoGuard, trelloRoutes);
+  app.use('/api/linear', demoGuard, linearRoutes);
   app.use('/api/dashboard', dashboardRoutes);
 
   // Error handler (must be last)

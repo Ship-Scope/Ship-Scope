@@ -102,6 +102,22 @@ export async function createTrelloCard(proposalId: string, overrides = {}) {
   });
 }
 
+export async function createLinearIssue(proposalId: string, overrides = {}) {
+  return prisma.linearIssue.create({
+    data: {
+      proposalId,
+      linearId: 'lin-uuid-001',
+      identifier: 'ENG-1',
+      linearUrl: 'https://linear.app/team/issue/ENG-1',
+      teamId: 'team-001',
+      status: 'Backlog',
+      priority: 0,
+      issueTitle: 'Test Linear Issue',
+      ...overrides,
+    },
+  });
+}
+
 // Create a full pipeline of test data
 export async function createFullPipelineData() {
   const source = await createFeedbackSource();

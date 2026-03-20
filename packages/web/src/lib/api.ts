@@ -172,6 +172,8 @@ export interface ThemeItem {
   jiraEpicUrl: string | null;
   trelloBoardListId: string | null;
   trelloBoardListUrl: string | null;
+  linearProjectId: string | null;
+  linearProjectUrl: string | null;
   createdAt: string;
   updatedAt: string;
   feedbackItems: {
@@ -731,4 +733,199 @@ export const trelloApi = {
   // Board template
   createBoard: () =>
     api.post<{ data: TrelloCreateBoardResult }>('/trello/create-board').then((r) => r.data.data),
+};
+
+// ============================================
+// Linear Integration API
+// ============================================
+
+export interface LinearTestResult {
+  success: boolean;
+  message: string;
+  userName?: string;
+}
+
+export interface LinearTeam {
+  id: string;
+  name: string;
+  key: string;
+}
+
+export interface LinearProject {
+  id: string;
+  name: string;
+  url: string;
+  state: string;
+}
+
+export interface LinearLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface LinearState {
+  id: string;
+  name: string;
+  type: string;
+  color: string;
+}
+
+export interface LinearCycle {
+  id: string;
+  name: string | null;
+  number: number;
+  startsAt: string;
+  endsAt: string;
+}
+
+export interface LinearExportResult {
+  id: string;
+  identifier: string;
+  linearUrl: string;
+}
+
+export interface LinearThemeExportResult {
+  projectName: string;
+  projectUrl: string;
+  issuesCreated: number;
+  issuesSkipped: number;
+}
+
+export interface LinearImportResult {
+  imported: number;
+  skipped: number;
+  sourceId: string;
+}
+
+export interface LinearSyncAllResult {
+  synced: number;
+  autoShipped: number;
+  errors: number;
+}
+
+export interface LinearDashboardSummary {
+  totalExported: number;
+  byStatus: Record<string, number>;
+  byPriority: Record<string, number>;
+  recentExports: {
+    identifier: string;
+    issueTitle: string;
+    status: string;
+    priority: number;
+    linearUrl: string;
+    createdAt: string;
+  }[];
+}
+
+export interface LinearIssueItem {
+  id: string;
+  proposalId: string;
+  linearId: string;
+  identifier: string;
+  linearUrl: string;
+  teamId: string;
+  status: string;
+  priority: number;
+  issueTitle: string;
+  projectId: string | null;
+  projectName: string | null;
+  labelIds: string[];
+  cycleId: string | null;
+  estimate: number | null;
+  syncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  proposal: {
+    id: string;
+    title: string;
+    status: string;
+    riceScore: number | null;
+  };
+}
+
+export const linearApi = {
+  // Configuration
+  saveConfig: (config: Record<string, string>) =>
+    api.put<{ data: { saved: boolean } }>('/linear/config', config).then((r) => r.data.data),
+
+  testConnection: () =>
+    api.post<{ data: LinearTestResult }>('/linear/test').then((r) => r.data.data),
+
+  listTeams: () => api.get<{ data: LinearTeam[] }>('/linear/teams').then((r) => r.data.data),
+
+  listProjects: () =>
+    api.get<{ data: LinearProject[] }>('/linear/projects').then((r) => r.data.data),
+
+  listLabels: () => api.get<{ data: LinearLabel[] }>('/linear/labels').then((r) => r.data.data),
+
+  listStates: () => api.get<{ data: LinearState[] }>('/linear/states').then((r) => r.data.data),
+
+  listCycles: () => api.get<{ data: LinearCycle[] }>('/linear/cycles').then((r) => r.data.data),
+
+  // Export & Sync
+  exportProposal: (proposalId: string) =>
+    api.post<{ data: LinearExportResult }>(`/linear/export/${proposalId}`).then((r) => r.data.data),
+
+  syncStatus: (proposalId: string) =>
+    api
+      .post<{
+        data: { identifier: string; status: string; titleUpdated: boolean };
+      }>(`/linear/sync/${proposalId}`)
+      .then((r) => r.data.data),
+
+  listIssues: () => api.get<{ data: LinearIssueItem[] }>('/linear/issues').then((r) => r.data.data),
+
+  getByProposal: (proposalId: string) =>
+    api
+      .get<{ data: LinearIssueItem | null }>(`/linear/issues/${proposalId}`)
+      .then((r) => r.data.data),
+
+  unlink: (proposalId: string) => api.delete(`/linear/issues/${proposalId}`),
+
+  // Theme → Project bulk export
+  exportTheme: (themeId: string) =>
+    api
+      .post<{ data: LinearThemeExportResult }>(`/linear/export-theme/${themeId}`)
+      .then((r) => r.data.data),
+
+  // Spec attachment
+  attachSpec: (proposalId: string) =>
+    api
+      .post<{
+        data: { identifier: string; commented: boolean };
+      }>(`/linear/attach-spec/${proposalId}`)
+      .then((r) => r.data.data),
+
+  // Import from Linear
+  importFeedback: (options?: { projectId?: string; stateType?: string; maxResults?: number }) =>
+    api
+      .post<{ data: LinearImportResult }>('/linear/import-feedback', options || {})
+      .then((r) => r.data.data),
+
+  // Bulk sync
+  syncAll: () =>
+    api.post<{ data: LinearSyncAllResult }>('/linear/sync-all').then((r) => r.data.data),
+
+  // Dashboard
+  dashboardSummary: () =>
+    api.get<{ data: LinearDashboardSummary }>('/linear/dashboard').then((r) => r.data.data),
+
+  // Attachment
+  createAttachment: (proposalId: string, appBaseUrl?: string) =>
+    api
+      .post<{ data: { attachmentId: string } }>(`/linear/attach/${proposalId}`, {
+        appBaseUrl: appBaseUrl || window.location.origin,
+      })
+      .then((r) => r.data.data),
+
+  // Webhook registration
+  registerWebhook: (callbackUrl: string) =>
+    api
+      .post<{ data: { webhookId: string; enabled: boolean } }>('/linear/register-webhook', {
+        callbackUrl,
+      })
+      .then((r) => r.data.data),
+
+  unregisterWebhook: () => api.delete('/linear/register-webhook'),
 };

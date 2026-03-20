@@ -7,13 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { useImportPreview, useImportCSV, useImportJSON } from '@/hooks/useImport';
 import { useJiraImportFeedback } from '@/hooks/useJira';
 import { useTrelloImportFeedback } from '@/hooks/useTrello';
+import { useLinearImportFeedback } from '@/hooks/useLinear';
 
 interface ImportModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-type ImportSource = 'file' | 'jira' | 'trello';
+type ImportSource = 'file' | 'jira' | 'trello' | 'linear';
 type Step = 'upload' | 'preview' | 'progress';
 
 export function ImportModal({ isOpen, onClose }: ImportModalProps) {
@@ -39,6 +40,7 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
   const jsonMutation = useImportJSON();
   const jiraImportMutation = useJiraImportFeedback();
   const trelloImportMutation = useTrelloImportFeedback();
+  const linearImportMutation = useLinearImportFeedback();
 
   const handleFile = useCallback(
     async (f: File) => {
@@ -107,11 +109,19 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
 
   const handleTrelloImport = useCallback(async () => {
     try {
-      await trelloImportMutation.mutateAsync();
+      await trelloImportMutation.mutateAsync({});
     } catch {
       setError('Trello import failed. Check your Trello configuration in Settings.');
     }
   }, [trelloImportMutation]);
+
+  const handleLinearImport = useCallback(async () => {
+    try {
+      await linearImportMutation.mutateAsync({});
+    } catch {
+      setError('Linear import failed. Check your Linear configuration in Settings.');
+    }
+  }, [linearImportMutation]);
 
   const handleClose = useCallback(() => {
     setImportSource('file');
@@ -137,11 +147,13 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
       ? 'Import from Jira'
       : importSource === 'trello'
         ? 'Import from Trello'
-        : step === 'upload'
-          ? 'Import Feedback'
-          : step === 'preview'
-            ? 'Import Feedback — Map Columns'
-            : 'Import Feedback — Importing...';
+        : importSource === 'linear'
+          ? 'Import from Linear'
+          : step === 'upload'
+            ? 'Import Feedback'
+            : step === 'preview'
+              ? 'Import Feedback — Map Columns'
+              : 'Import Feedback — Importing...';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -196,6 +208,19 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
           >
             From Trello
           </button>
+          <button
+            onClick={() => {
+              setImportSource('linear');
+              setError('');
+            }}
+            className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
+              importSource === 'linear'
+                ? 'text-accent-blue border-b-2 border-accent-blue'
+                : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            From Linear
+          </button>
         </div>
 
         {/* Body */}
@@ -248,6 +273,24 @@ export function ImportModal({ isOpen, onClose }: ImportModalProps) {
                   <CheckCircle2 size={14} />
                   Imported {trelloImportMutation.data.imported} items (
                   {trelloImportMutation.data.skipped} duplicates skipped)
+                </p>
+              )}
+              {error && <p className="text-sm text-danger">{error}</p>}
+            </div>
+          ) : importSource === 'linear' ? (
+            <div className="space-y-4">
+              <p className="text-sm text-text-secondary">
+                Import issues from your configured Linear team as feedback items for AI analysis.
+              </p>
+              <Button onClick={handleLinearImport} loading={linearImportMutation.isPending}>
+                <Download size={14} />
+                Import from Linear
+              </Button>
+              {linearImportMutation.data && (
+                <p className="text-sm text-success flex items-center gap-1.5">
+                  <CheckCircle2 size={14} />
+                  Imported {linearImportMutation.data.imported} items (
+                  {linearImportMutation.data.skipped} duplicates skipped)
                 </p>
               )}
               {error && <p className="text-sm text-danger">{error}</p>}
