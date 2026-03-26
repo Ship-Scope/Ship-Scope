@@ -41,6 +41,16 @@ export const settingsService = {
       const token = result['trello_token'];
       result['trello_token'] = token.slice(0, 4) + '...' + token.slice(-4);
     }
+    // Mask the Linear API key
+    if (result['linear_api_key']) {
+      const key = result['linear_api_key'];
+      result['linear_api_key'] = key.slice(0, 6) + '...' + key.slice(-4);
+    }
+    // Mask the Linear webhook secret
+    if (result['linear_webhook_secret']) {
+      const s = result['linear_webhook_secret'];
+      result['linear_webhook_secret'] = s.slice(0, 4) + '...' + s.slice(-4);
+    }
     return result;
   },
 

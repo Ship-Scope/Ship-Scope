@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Upload, Brain, Lightbulb, Blocks, Trello } from 'lucide-react';
+import { Upload, Brain, Lightbulb, Blocks, Trello, Workflow } from 'lucide-react';
 
 export function QuickActions() {
   const navigate = useNavigate();
@@ -33,6 +33,12 @@ export function QuickActions() {
       label: 'Trello Integration',
       description: 'Export, sync & import from Trello',
       icon: <Trello size={20} />,
+      onClick: () => navigate('/settings'),
+    },
+    {
+      label: 'Linear Integration',
+      description: 'Export, sync & import from Linear',
+      icon: <Workflow size={20} />,
       onClick: () => navigate('/settings'),
     },
   ];

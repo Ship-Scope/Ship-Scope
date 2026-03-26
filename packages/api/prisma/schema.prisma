@@ -86,6 +86,10 @@ model Theme {
   trelloBoardListId String?  // Trello list ID where theme cards are created
   trelloBoardListUrl String? // URL to the Trello board
 
+  // Linear Integration
+  linearProjectId   String?  // Linear project ID where theme issues are grouped
+  linearProjectUrl  String?  // Full URL to the Linear project
+
   // Relations
   feedbackItems FeedbackThemeLink[]
   proposals     Proposal[]
@@ -133,8 +137,9 @@ model Proposal {
   theme       Theme?  @relation(fields: [themeId], references: [id])
   evidence    ProposalEvidence[]
   specs       Spec[]
-  jiraIssue   JiraIssue?
-  trelloCard  TrelloCard?
+  jiraIssue    JiraIssue?
+  trelloCard   TrelloCard?
+  linearIssue  LinearIssue?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -270,4 +275,40 @@ model TrelloCard {
   @@index([proposalId])
   @@index([boardId])
   @@map("trello_cards")
+}
+
+// ============================================
+// LINEAR INTEGRATION
+// ============================================
+
+model LinearIssue {
+  id          String   @id @default(cuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id])
+
+  // Linear issue data
+  linearId       String   // Linear internal UUID
+  identifier     String   // e.g. "ENG-123"
+  linearUrl      String   // Full URL to the issue
+  teamId         String   // Linear team ID
+  status         String   @default("Backlog")
+  priority       Int      @default(0) // 0=No priority, 1=Urgent, 2=High, 3=Medium, 4=Low
+  issueTitle     String
+  projectId      String?  // Linear project ID (for theme exports)
+  projectName    String?  // Linear project name
+  labelIds       String[] // Applied label IDs
+  cycleId        String?  // Sprint/cycle assignment
+  estimate       Int?     // Story point estimate
+  syncedAt       DateTime @default(now())
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([proposalId])
+  @@unique([linearId])
+  @@unique([identifier])
+  @@index([proposalId])
+  @@index([teamId])
+  @@index([projectId])
+  @@map("linear_issues")
 }

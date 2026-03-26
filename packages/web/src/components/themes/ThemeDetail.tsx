@@ -6,6 +6,7 @@ import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 import { useThemeDetail } from '@/hooks/useThemes';
 import { useJiraExportTheme } from '@/hooks/useJira';
 import { useTrelloExportTheme } from '@/hooks/useTrello';
+import { useLinearExportTheme } from '@/hooks/useLinear';
 
 interface ThemeDetailProps {
   themeId: string;
@@ -36,6 +37,7 @@ export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
   const { data: theme, isLoading } = useThemeDetail(themeId);
   const epicExportMutation = useJiraExportTheme();
   const trelloExportMutation = useTrelloExportTheme();
+  const linearExportMutation = useLinearExportTheme();
 
   if (isLoading) {
     return (
@@ -199,6 +201,53 @@ export function ThemeDetail({ themeId, onClose }: ThemeDetailProps) {
           {trelloExportMutation.isError && (
             <p className="text-xs text-danger mt-2">
               Export failed. Check your Trello configuration in Settings.
+            </p>
+          )}
+        </div>
+
+        {/* Linear Project Export */}
+        <div>
+          <h4 className="text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
+            Linear Integration
+          </h4>
+          {theme.linearProjectId ? (
+            <div className="bg-bg-surface-2 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-text-muted">Linked as Project:</span>
+                {theme.linearProjectUrl ? (
+                  <a
+                    href={theme.linearProjectUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-accent-blue hover:underline flex items-center gap-1"
+                  >
+                    View Project
+                    <ExternalLink size={10} />
+                  </a>
+                ) : (
+                  <span className="text-sm text-text-secondary">Exported</span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => linearExportMutation.mutate(themeId)}
+              loading={linearExportMutation.isPending}
+            >
+              Export as Linear Project
+            </Button>
+          )}
+          {linearExportMutation.isSuccess && linearExportMutation.data && (
+            <p className="text-xs text-success mt-2">
+              Created project &ldquo;{linearExportMutation.data.projectName}&rdquo; with{' '}
+              {linearExportMutation.data.issuesCreated} issues
+            </p>
+          )}
+          {linearExportMutation.isError && (
+            <p className="text-xs text-danger mt-2">
+              Export failed. Check your Linear configuration in Settings.
             </p>
           )}
         </div>

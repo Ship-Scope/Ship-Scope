@@ -41,8 +41,9 @@ graph LR
 - **Spec Generation** — Generate PRDs and agent-ready prompts from approved proposals
 - **Jira Integration** — Bi-directional sync: export proposals/epics to Jira, import Jira issues as feedback, real-time webhook sync
 - **Trello Integration** — Export proposals as cards, themes as lists, import Trello cards as feedback, real-time webhook sync
+- **Linear Integration** — Export proposals as issues, themes as projects, import Linear issues as feedback, real-time webhook sync
 - **Dashboard** — Overview of feedback volume, sentiment trends, and top themes
-- **Settings** — AI config, synthesis tuning, Jira configuration, Trello configuration, data management, API key management
+- **Settings** — AI config, synthesis tuning, Jira configuration, Trello configuration, Linear configuration, data management, API key management
 
 ## Quick Start
 

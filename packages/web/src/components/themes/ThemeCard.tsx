@@ -36,6 +36,7 @@ export function ThemeCard({ theme, onClick }: ThemeCardProps) {
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {theme.jiraEpicKey && <Badge variant="blue">Epic</Badge>}
           {theme.trelloBoardListId && <Badge variant="green">Trello</Badge>}
+          {theme.linearProjectId && <Badge variant="purple">Linear</Badge>}
           {theme.category && (
             <Badge variant={categoryVariants[theme.category] || 'gray'}>
               {categoryLabels[theme.category] || theme.category}

@@ -30,6 +30,13 @@ import {
   useTrelloUnlink,
   useTrelloAttachSpec,
 } from '@/hooks/useTrello';
+import {
+  useLinearExport,
+  useLinearIssueByProposal,
+  useLinearSyncStatus,
+  useLinearUnlink,
+  useLinearAttachSpec,
+} from '@/hooks/useLinear';
 import { getSentimentColor, getUrgencyColor } from '@/lib/utils';
 
 interface ProposalDetailProps {
@@ -74,6 +81,11 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
   const trelloUnlinkMutation = useTrelloUnlink();
   const trelloAttachSpecMutation = useTrelloAttachSpec();
   const { data: trelloCard } = useTrelloCardByProposal(proposalId);
+  const linearExportMutation = useLinearExport();
+  const linearSyncMutation = useLinearSyncStatus();
+  const linearUnlinkMutation = useLinearUnlink();
+  const linearAttachSpecMutation = useLinearAttachSpec();
+  const { data: linearIssue } = useLinearIssueByProposal(proposalId);
 
   if (isLoading) {
     return (
@@ -314,6 +326,92 @@ export function ProposalDetail({ proposalId, onClose }: ProposalDetailProps) {
             {trelloExportMutation.isError && (
               <p className="text-xs text-danger mt-1">
                 {(trelloExportMutation.error as Error)?.message || 'Failed to export'}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Linear Integration */}
+        {(proposal.status === 'approved' || proposal.status === 'shipped') && (
+          <div>
+            {linearIssue ? (
+              <div className="bg-bg-surface-2 rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={linearIssue.linearUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-accent-blue hover:underline flex items-center gap-1"
+                    >
+                      {linearIssue.identifier}
+                      <ExternalLink size={10} />
+                    </a>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-bg-surface border border-border text-text-muted">
+                      {linearIssue.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => linearSyncMutation.mutate(proposal.id)}
+                      loading={linearSyncMutation.isPending}
+                      title="Sync status from Linear"
+                    >
+                      <RefreshCw size={12} />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            'Unlink this Linear issue? The issue in Linear will not be deleted.',
+                          )
+                        ) {
+                          linearUnlinkMutation.mutate(proposal.id);
+                        }
+                      }}
+                      loading={linearUnlinkMutation.isPending}
+                      title="Unlink Linear issue"
+                    >
+                      <Unlink size={12} className="text-danger" />
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted">Linked to Linear</p>
+                {existingSpec && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="mt-2"
+                    onClick={() => linearAttachSpecMutation.mutate(proposal.id)}
+                    loading={linearAttachSpecMutation.isPending}
+                    title="Attach PRD spec as a Linear comment"
+                  >
+                    <Paperclip size={12} />
+                    <span className="text-xs">
+                      {linearAttachSpecMutation.isSuccess
+                        ? 'Spec Attached!'
+                        : 'Attach Spec to Linear'}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                variant="secondary"
+                size="sm"
+                loading={linearExportMutation.isPending}
+                onClick={() => linearExportMutation.mutate(proposal.id)}
+              >
+                Export to Linear
+              </Button>
+            )}
+            {linearExportMutation.isError && (
+              <p className="text-xs text-danger mt-1">
+                {(linearExportMutation.error as Error)?.message || 'Failed to export'}
               </p>
             )}
           </div>

@@ -12,6 +12,7 @@ import { DashboardEmptyState } from '@/components/dashboard/DashboardEmptyState'
 import { OnboardingSteps } from '@/components/dashboard/OnboardingSteps';
 import { JiraSyncWidget } from '@/components/dashboard/JiraSyncWidget';
 import { TrelloSyncWidget } from '@/components/dashboard/TrelloSyncWidget';
+import { LinearSyncWidget } from '@/components/dashboard/LinearSyncWidget';
 import {
   useDashboardStats,
   useActivityFeed,
@@ -145,6 +146,14 @@ export default function DashboardPage() {
                 Trello Integration
               </h3>
               <TrelloSyncWidget />
+            </div>
+
+            {/* Linear Integration Widget */}
+            <div className="bg-bg-surface border border-border rounded-xl p-5">
+              <h3 className="text-sm font-medium text-text-muted uppercase tracking-wider mb-4">
+                Linear Integration
+              </h3>
+              <LinearSyncWidget />
             </div>
 
             {/* Onboarding banner when some steps incomplete */}

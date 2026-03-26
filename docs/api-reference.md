@@ -749,3 +749,273 @@ Get Trello integration summary for the dashboard widget.
   }
 }
 ```
+
+---
+
+## Linear Integration
+
+All Linear endpoints are prefixed with `/api/linear`.
+
+### PUT /api/linear/config
+
+Save Linear integration configuration.
+
+**Request Body:**
+
+```json
+{
+  "linear_api_key": "lin_api_...",
+  "linear_team_id": "team-uuid",
+  "linear_project_id": "project-uuid",
+  "linear_done_states": "Done,Cancelled",
+  "linear_default_label_id": "label-uuid",
+  "linear_cycle_id": "cycle-uuid"
+}
+```
+
+All fields are optional. Provide only the fields you want to update.
+
+**Response 200:**
+
+```json
+{ "data": { "saved": true } }
+```
+
+### POST /api/linear/test
+
+Test the Linear connection with current credentials.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "success": true,
+    "message": "Connected as User Name (user@email.com)",
+    "userName": "User Name"
+  }
+}
+```
+
+### GET /api/linear/teams
+
+List teams the authenticated user belongs to.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "team-uuid", "name": "Engineering", "key": "ENG" }] }
+```
+
+### GET /api/linear/projects
+
+List projects for the configured team.
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    { "id": "proj-uuid", "name": "Q1 Roadmap", "url": "https://linear.app/...", "state": "started" }
+  ]
+}
+```
+
+### GET /api/linear/labels
+
+List labels for the configured team.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "label-uuid", "name": "Feature", "color": "#5E6AD2" }] }
+```
+
+### GET /api/linear/states
+
+List workflow states for the configured team.
+
+**Response 200:**
+
+```json
+{ "data": [{ "id": "state-uuid", "name": "In Progress", "type": "started", "color": "#F2C94C" }] }
+```
+
+### GET /api/linear/cycles
+
+List cycles (sprints) for the configured team.
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "cycle-uuid",
+      "name": null,
+      "number": 12,
+      "startsAt": "2025-01-01T00:00:00.000Z",
+      "endsAt": "2025-01-14T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+### POST /api/linear/export/:proposalId
+
+Export an approved proposal as a Linear issue.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "identifier": "ENG-42",
+    "linearUrl": "https://linear.app/team/issue/ENG-42",
+    "linearId": "issue-uuid",
+    "status": "Backlog",
+    "priority": 3
+  }
+}
+```
+
+### POST /api/linear/sync/:proposalId
+
+Sync the status of a linked Linear issue back to ShipScope.
+
+**Response 200:**
+
+```json
+{ "data": { "status": "In Progress", "priority": 2 } }
+```
+
+### GET /api/linear/issues
+
+List all proposals exported to Linear.
+
+**Response 200:**
+
+```json
+{
+  "data": [
+    {
+      "id": "record-uuid",
+      "proposalId": "proposal-uuid",
+      "identifier": "ENG-42",
+      "linearUrl": "https://linear.app/team/issue/ENG-42",
+      "status": "In Progress",
+      "priority": 2,
+      "issueTitle": "Add dark mode support",
+      "proposal": { "id": "...", "title": "...", "status": "approved" }
+    }
+  ]
+}
+```
+
+### GET /api/linear/issues/:proposalId
+
+Get the linked Linear issue for a specific proposal.
+
+**Response 200:** Same shape as individual items in the list above.
+
+**Response 404:** When no linked issue exists.
+
+### DELETE /api/linear/issues/:proposalId
+
+Unlink a Linear issue from a proposal. The issue in Linear is **not** deleted.
+
+**Response 200:**
+
+```json
+{ "data": { "unlinked": true } }
+```
+
+### POST /api/linear/export-theme/:themeId
+
+Export all proposals under a theme as a Linear project with individual issues.
+
+**Response 201:**
+
+```json
+{
+  "data": {
+    "projectName": "Dark Mode",
+    "projectUrl": "https://linear.app/team/project/dark-mode",
+    "issuesCreated": 5,
+    "issuesSkipped": 1
+  }
+}
+```
+
+### POST /api/linear/attach-spec/:proposalId
+
+Attach the generated PRD spec as a comment on the linked Linear issue.
+
+**Response 200:**
+
+```json
+{ "data": { "attached": true } }
+```
+
+### POST /api/linear/import-feedback
+
+Import Linear issues as feedback items for AI analysis.
+
+**Request Body (optional):**
+
+```json
+{
+  "projectId": "project-uuid",
+  "stateType": "started",
+  "maxResults": 50
+}
+```
+
+**Response 200:**
+
+```json
+{ "data": { "imported": 25, "skipped": 3, "sourceId": "source-uuid" } }
+```
+
+### POST /api/linear/sync-all
+
+Sync status for all exported Linear issues at once.
+
+**Response 200:**
+
+```json
+{ "data": { "synced": 10, "autoShipped": 2, "errors": 0 } }
+```
+
+### POST /api/linear/webhook
+
+Receive Linear webhook events for real-time issue state sync.
+
+**Response 200:**
+
+```json
+{ "data": { "received": true } }
+```
+
+### GET /api/linear/dashboard
+
+Get Linear integration summary for the dashboard widget.
+
+**Response 200:**
+
+```json
+{
+  "data": {
+    "total": 15,
+    "byStatus": [
+      { "status": "In Progress", "count": 8 },
+      { "status": "Done", "count": 5 }
+    ],
+    "byPriority": [
+      { "priority": 1, "count": 3 },
+      { "priority": 2, "count": 7 }
+    ],
+    "recentExports": []
+  }
+}
+```
